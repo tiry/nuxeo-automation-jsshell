@@ -12,6 +12,10 @@ function AutomationWrapper(operationId,opts) {
     return this;
   }
 
+  AutomationWrapper.prototype.setInput = function(inputValue){
+      this.opts.automationParams.input = inputValue;
+      return this;
+  }
   AutomationWrapper.prototype.addParameters = function(params){
     jQuery.extend(this.opts.automationParams.params,params);
     return this;

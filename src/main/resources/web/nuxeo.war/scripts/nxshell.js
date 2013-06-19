@@ -4,8 +4,110 @@ function nxshell() {
 
   this.automationDefs= [];
 
+  var me = this;
+
+  this.builtins = [ {id : 'ls', impl : function (cmds, term) {return me.lsCmd(cmds, term);}},
+                    {id : 'pwd', impl : function (cmds, term) {return me.pwdCmd(cmds, term);}},
+                    {id : 'cd', impl : function (cmds, term) {return me.cdCmd(cmds, term);}},
+                   ];
+
+  this.ctx = { path : "/" };
+
   nxshell.prototype.getAutomationDefs = function () {
       return this.automationDefs;
+  }
+
+  nxshell.prototype.cdCmd = function (cmds, term) {
+    var me = this;
+    if (cmds.length>1) {
+      var target = cmds[1];
+      if (target.indexOf("/")!=0) {
+        target = me.ctx.path + target;
+      }
+      var automation = jQuery().automation('Document.Fetch' , { automationParams : {params : { value : target}}});
+      var successCB = function(data, status,xhr) {
+        me.ctx.path = data.path;
+        me.ctx.doc = data;
+        term.echo(" current Document is now " + me.prettyPrint(data));
+      };
+      var errorCB = function(xhr,status) {
+        term.echo("Error " + status);
+      };
+      automation.execute(successCB, errorCB);
+    }
+  }
+
+  nxshell.prototype.lsCmd = function (cmds, term) {
+    var me = this;
+    var target = this.ctx.doc.uid;
+    // XXX manage path ref !
+    var automation = jQuery().automation('Document.PageProvider' , { automationParams :
+     {params :
+      { query : "select * from Document where ecm:parentId = ? AND ecm:isCheckedInVersion= 0",
+        queryParams : target ,
+        pageSize : 5,
+        page : 1
+       }
+     }
+    });
+
+    var doDisplayPage = function(docs, term) {
+       console.log(docs);
+       console.log(docs.entries.length);
+       for (var i =0 ; i < docs.entries.length; i++) {
+         term.echo(docs.entries[i].uid);
+       }
+       term.echo("##### display page : " + docs.pageIndex + "/" + docs.pageCount);
+
+       var me = this;
+       var idx = docs.pageIndex;
+       var prevIdx = idx-1;
+       var nextIdx = idx+1;
+       if (prevIdx < 0) { prevIdx = 0};
+       if (nextIdx > docs.pageCount) { nextIdx = idx};
+       displayPage(term, function() { fetchPage(prevIdx, term)}, function() { fetchPage(nextIdx, term)})
+    }
+
+    var successCB = function(data, status,xhr, term) {
+        doDisplayPage(data, term);
+      };
+
+    var errorCB = function(xhr,status, term) {
+        term.echo("Error " + status);
+      };
+
+    var fetchPage = function (page, term) {
+      automation.addParameter("page", page);
+      automation.execute(function(data, status,xhr) {return successCB(data,status,xhr,term)}, function(xhr,status) {return errorCB(xhr, status, term)});
+    }
+
+    fetchPage(1, term);
+  }
+
+  var displayPage = function (term, prevPageCB, nextPageCB) {
+    term.push(jQuery.noop, {
+      keydown: function(e) {
+        if (e.which === 38 ) { //up
+          prevPageCB();
+        } else if (e.which === 40) { //down
+           nextPageCB();
+        } else if (e.which === 34) { // Page up
+           prevPageCB();
+        } else if (e.which === 33) { // page down
+           nextPageCB();
+        } else if (e.which == 81) { //Q
+          term.pop();
+        }
+      }
+    });
+  }
+
+  nxshell.prototype.pwdCmd = function (cmds, term) {
+    if (this.ctx.doc) {
+      term.echo(" current Document is " + this.prettyPrint(this.ctx.doc));
+    } else {
+      term.echo(" current Path is " + this.ctx.path);
+    }
   }
 
   nxshell.prototype.nxGreetings = function () {
@@ -38,6 +140,12 @@ function nxshell() {
   nxshell.prototype.nxTermHandler = function (cmd, term) {
        var cmds = cmd.split(" ");
 
+       var me = this;
+       var cmd = this.findBuiltin(cmds[0]);
+       if (cmd) {
+         cmd.impl(cmds, term);
+         return;
+       }
        var op = this.findOperation(cmds[0]);
        if (op) {
          var opts = {automationParams : { params : {},
@@ -46,67 +154,107 @@ function nxshell() {
            var arg = cmds[i];
            if (arg.indexOf("=")>0) {
              var param = arg.split("=");
-             console.log(param);
              opts.automationParams.params[param[0]]=param[1];
            }
          }
 
          var automation = jQuery().automation(op.id , opts);
-
          var successCB = function(data, status,xhr) {
-           term.echo(data);
+           term.echo(me.prettyPrint(data));
          };
          var errorCB = function(xhr,status) {
            term.echo("Error " + status);
          };
 
          automation.execute(successCB, errorCB);
-
        }
        console.log(cmd);
-       term.echo("noop");
-    }
+  }
 
+  nxshell.prototype.printDoc = function (doc) {
+    var title = doc.title;
+    if (!title) {
+      title = doc.uid;
+    }
+    return title + " " + doc.path + " (" + doc.type + ")";
+  }
+
+  nxshell.prototype.prettyPrint = function (ob) {
+    var type = ob['entity-type'];
+    if (type == 'document') {
+      return this.printDoc(ob);
+    } else {
+      return JSON.stringify(ob);
+    }
+  }
 
   nxshell.prototype.findOperation = function (operationId) {
-     console.log("this=", this);
-     console.log(this.automationDefs);
      for (var idx=0; idx < this.automationDefs.operations.length; idx++) {
         var op = this.automationDefs.operations[idx];
         if (op.id===operationId) {
           return op;
         }
+     }
+     for (var idx=0; idx < this.automationDefs.chains.length; idx++) {
+         var op = this.automationDefs.chains[idx];
+         if (op.id===operationId) {
+           return op;
+         }
+     }
+     return null;
+  }
+
+  nxshell.prototype.findBuiltin = function (cmdId) {
+    for (var idx=0; idx < this.builtins.length; idx++) {
+      var cmd = this.builtins[idx];
+      if (cmd.id===cmdId) {
+        return cmd;
       }
-      return null;
     }
+    return null;
+  }
 
   nxshell.prototype.completion = function (term,input,callback) {
-      var existingInput = term.get_command().trim()
-      var op = this.findOperation(existingInput.split(" ")[0]);
+      var existingInput = term.get_command().trim();
       var suggestions = [];
-      if (op) {
-       for (var idx=0; idx < op.params.length; idx++) {
-         var pName = op.params[idx].name;
-         if (existingInput.indexOf(pName + "=")>0) {
-           continue;
-         }
-         if (pName.indexOf(input)==0) {
-           suggestions.push(pName + "=");
-         }
-         callback(suggestions);
-       }
+      var cmd = this.findBuiltin(existingInput.split(" ")[0]);
+      if (cmd) {
+        // XXX
       } else {
-        var cmd = input.split(" ")[0];
-        for (var idx=0; idx < this.automationDefs.operations.length; idx++) {
-          var op = this.automationDefs.operations[idx];
-          if (op.id.indexOf(cmd)==0) {
-            suggestions.push(op.id);
+        var op = this.findOperation(existingInput.split(" ")[0]);
+        if (op) {
+         for (var idx=0; idx < op.params.length; idx++) {
+           var pName = op.params[idx].name;
+           if (existingInput.indexOf(pName + "=")>0) {
+             continue;
+           }
+           if (pName.indexOf(input)==0) {
+             suggestions.push(pName + "=");
+           }
+           callback(suggestions);
+         }
+        } else {
+          var cmd = input.split(" ")[0];
+          for (var idx=0; idx < this.automationDefs.operations.length; idx++) {
+            var op = this.automationDefs.operations[idx];
+            if (op.id.indexOf(cmd)==0) {
+              suggestions.push(op.id);
+            }
+            if (suggestions.length > 5) {
+              break;
+            }
           }
-          if (suggestions.length > 5) {
-            break;
-          }
+          for (var idx=0; idx < this.builtins.length; idx++) {
+              var op = this.builtins[idx];
+              if (op.id.indexOf(cmd)==0) {
+                suggestions.push(op.id);
+              }
+              if (suggestions.length > 5) {
+                break;
+              }
+            }
+          callback(suggestions);
         }
-       callback(suggestions);
       }
     }
 }

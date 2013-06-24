@@ -1,4 +1,4 @@
-function createAndReadDocs(cb) {
+function createAndReadDocs() {
 
   var root = {};
   var children = [];
@@ -10,9 +10,9 @@ function createAndReadDocs(cb) {
   var testSuite = [];
 
   var nextTest = function() {
-    var targetTest = testSuite.shift();
-    if (targetTest) {
-      targetTest();
+    var test = testSuite.shift();
+    if (test) {
+      test();
     }
   }
 
@@ -33,7 +33,8 @@ function createAndReadDocs(cb) {
   var createRoot = function() {
     var createdOK = function(doc, status, xhr) {
       root = doc;
-      ok( doc.uid, "created container with uid : " + doc.uid );
+      console.log("created new Folder with uid = " + doc.uid
+          + " and title " + doc.title);
       nextTest();
     };
 
@@ -45,7 +46,8 @@ function createAndReadDocs(cb) {
   var createChild1 = function() {
 
     createdOK = function(doc, status, xhr) {
-      ok( (doc.uid!=null) && (doc.path.indexOf(root.path)==0), "created file with uid : " + doc.uid + " and path " + doc.path );
+      console.log(doc);
+      console.log("created new File with uid = " + doc.uid);
       children.push(doc);
       nextTest();
     };
@@ -78,8 +80,8 @@ function createAndReadDocs(cb) {
   var updateChild2 = function() {
 
     var updatedOK = function(doc, status, xhr) {
-      ok(doc.properties['dc:description']=="Simple File", "description updated ok " + doc.properties['dc:description']);
-      ok(doc.properties['dc:subjects'].length==2, "subject updated ok " + doc.properties['dc:subjects']);
+      console.log(doc);
+      console.log("file updated with uid = " + doc.uid);
       nextTest();
     };
 
@@ -90,7 +92,7 @@ function createAndReadDocs(cb) {
               automationParams : {
                 params : {
                   save : "true",
-                  properties : "dc:description=Simple File\ndc:subjects=subject1,subject2"
+                  properties : "dc:description=Simmple File\ndc:subjects=subject1,subject2"
                 },
                 input : "doc:" + children[1].path
               }
@@ -105,7 +107,7 @@ function createAndReadDocs(cb) {
   var getChildren = function() {
 
       var displayChildren = function(docs, status, xhr) {
-        ok(docs.entries.length==2, "2 children");
+        console.log(docs);
         nextTest();
       };
 
@@ -124,15 +126,6 @@ function createAndReadDocs(cb) {
 
   testSuite.push(getChildren);
 
-  if (cb) {
-    testSuite.push(cb);
-  }
   nextTest();
-}
 
-asyncTest( "Create and read docs test", function() {
-    createAndReadDocs(function() {
-      ok( true, "Passed CRUD Tests" );
-      start();
-    });
-});
+}

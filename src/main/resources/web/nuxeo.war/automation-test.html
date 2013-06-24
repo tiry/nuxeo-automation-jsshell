@@ -1,12 +1,13 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-     <link class="component" href="/nuxeo/css/jquery.terminal.css" rel="stylesheet" type="text/css" />
+     <link class="component" href="/nuxeo/css/qunit-1.12.0.css" rel="stylesheet" type="text/css" />
      <script type="text/javascript"><!--
 var nxContextPath = "/nuxeo";
 //--></script>
      <script type="text/javascript" src="/nuxeo/nxthemes-lib/jquery.js"></script>
      <script type="text/javascript" src="/nuxeo/scripts/automation.js"></script>
+     <script type="text/javascript" src="/nuxeo/scripts/qunit-1.12.0.js"></script>
      <script type="text/javascript" src="/nuxeo/scripts/jquery.terminal-0.6.3.js"></script>
      <script type="text/javascript" src="/nuxeo/scripts/automation-tests.js"></script>
 </head>
@@ -18,7 +19,8 @@ var nxContextPath = "/nuxeo";
 
 </script>
 
-<input type="button" value="createAndReadDocs()" onclick="createAndReadDocs()"/>
+<div id="qunit"></div>
+<div id="qunit-fixture"></div>
 
 </body>
 </html>

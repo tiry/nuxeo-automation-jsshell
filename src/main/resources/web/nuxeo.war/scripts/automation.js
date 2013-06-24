@@ -12,12 +12,13 @@ function AutomationWrapper(operationId,opts) {
     return this;
   }
 
-  AutomationWrapper.prototype.setInput = function(inputValue){
-      this.opts.automationParams.input = inputValue;
-      return this;
-  }
   AutomationWrapper.prototype.addParameters = function(params){
     jQuery.extend(this.opts.automationParams.params,params);
+    return this;
+  }
+
+  AutomationWrapper.prototype.setInput = function(inputValue) {
+    this.opts.automationParams.input = inputValue;
     return this;
   }
 
@@ -47,6 +48,8 @@ function AutomationWrapper(operationId,opts) {
       voidOp=false;
     }
     var timeout = 5+ (this.opts.execTimeout/1000)|0;
+    var documentSchemas = this.opts.documentSchemas;
+    var repo = this.opts.repository;
     jQuery.ajax({
         type: 'POST',
         contentType : 'application/json+nxrequest',
@@ -54,6 +57,12 @@ function AutomationWrapper(operationId,opts) {
         beforeSend : function (xhr) {
             xhr.setRequestHeader('X-NXVoidOperation', voidOp);
             xhr.setRequestHeader('Nuxeo-Transaction-Timeout', timeout);
+            if (documentSchemas.length>0) {
+                xhr.setRequestHeader('X-NXDocumentProperties',documentSchemas);
+              }
+            if (repo) {
+                xhr.setRequestHeader('X-NXRepository', repo);
+            }
         },
         url: targetUrl,
         timeout: this.opts.execTimeout,
@@ -92,6 +101,8 @@ function AutomationWrapper(operationId,opts) {
         voidOp=false;
       }
       var timeout = 5+ (this.opts.execTimeout/1000)|0;
+      var documentSchemas = this.opts.documentSchemas;
+      var repo = this.opts.repository;
       jQuery.ajax({
           type: 'POST',
           contentType : 'application/json+nxrequest',
@@ -99,6 +110,12 @@ function AutomationWrapper(operationId,opts) {
           beforeSend : function (xhr) {
               xhr.setRequestHeader('CTYPE_MULTIPART_MIXED', blobOp);
               xhr.setRequestHeader('Nuxeo-Transaction-Timeout', timeout);
+              if (documentSchemas.length>0) {
+                xhr.setRequestHeader('X-NXDocumentProperties',documentSchemas);
+              }
+              if (repo) {
+                  xhr.setRequestHeader('X-NXRepository', repo);
+              }
           },
           url: targetUrl,
           timeout: this.opts.execTimeout,
@@ -148,6 +165,8 @@ function AutomationWrapper(operationId,opts) {
       targetUrl = targetUrl + 'batch/execute';
     }
     var timeout = 5+ (this.opts.execTimeout/1000)|0;
+    var documentSchemas = this.opts.documentSchemas;
+    var repo = this.opts.repository;
     jQuery.ajax({
         type: 'POST',
         contentType : 'application/json+nxrequest',
@@ -155,6 +174,12 @@ function AutomationWrapper(operationId,opts) {
         beforeSend : function (xhr) {
             xhr.setRequestHeader('X-NXVoidOperation', voidOp);
             xhr.setRequestHeader('Nuxeo-Transaction-Timeout', timeout);
+            if (documentSchemas.length>0) {
+                xhr.setRequestHeader('X-NXDocumentProperties',documentSchemas);
+            }
+            if (repo) {
+                xhr.setRequestHeader('X-NXRepository', repo);
+            }
         },
         url: targetUrl,
         timeout: this.opts.execTimeout,
@@ -192,8 +217,6 @@ function AutomationWrapper(operationId,opts) {
         }
       })
     }
-
-
 }
 
 (function($) {
@@ -207,6 +230,7 @@ function AutomationWrapper(operationId,opts) {
         url : nxContextPath + "/site/automation",
         execTimeout : 30000,
         uploadTimeout : 30000,
+        documentSchemas : "dublincore",
         automationParams : {
            params : {},
            context : {}

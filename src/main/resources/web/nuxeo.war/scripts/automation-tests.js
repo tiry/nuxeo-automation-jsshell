@@ -1,4 +1,41 @@
-function createAndReadDocs(cb) {
+function automationTestSuite(suiteName) {
+
+  this.testSuite = [];
+  this.suiteName = suiteName;
+
+  automationTestSuite.prototype.nextTest = function() {
+    var targetTest = this.testSuite.shift();
+    if (targetTest) {
+      targetTest();
+    }
+  }
+
+  automationTestSuite.prototype.newCallback = function(cbFunction) {
+    var me = this;
+    return function(doc, status, xhr) {
+      cbFunction(doc, status, xhr);
+      me.nextTest();
+    }
+  }
+
+  automationTestSuite.prototype.addTest = function(testFunction) {
+    this.testSuite.push(testFunction);
+  }
+
+  automationTestSuite.prototype.run = function() {
+    var me = this;
+    var finish = function() {
+      ok(true, "Suite '" + me.suiteName + "' completed OK !");
+      start();
+    }
+    this.testSuite.push(finish);
+    asyncTest(me.suiteName, function() {
+      me.nextTest()
+    });
+  }
+}
+
+function runCreateAndReadDocsTestSuite() {
 
   var root = {};
   var children = [];
@@ -7,14 +44,7 @@ function createAndReadDocs(cb) {
     alert(msg)
   };
 
-  var testSuite = [];
-
-  var nextTest = function() {
-    var targetTest = testSuite.shift();
-    if (targetTest) {
-      targetTest();
-    }
-  }
+  var suite = new automationTestSuite("create, update and read documents");
 
   var createOp = jQuery()
       .automation(
@@ -30,24 +60,26 @@ function createAndReadDocs(cb) {
             }
           });
 
-  var createRoot = function() {
+  // **********************
+  // create root
+  var testCreateRoot = function() {
     var createdOK = function(doc, status, xhr) {
       root = doc;
-      ok( doc.uid, "created container with uid : " + doc.uid );
-      nextTest();
+      ok(doc.uid, "created container with uid : " + doc.uid);
     };
 
-    createOp.execute(createdOK, failedCB);
+    createOp.execute(suite.newCallback(createdOK), failedCB);
   };
 
-  testSuite.push(createRoot);
-
-  var createChild1 = function() {
+  // **********************
+  // create first child
+  var testCreateChild1 = function() {
 
     createdOK = function(doc, status, xhr) {
-      ok( (doc.uid!=null) && (doc.path.indexOf(root.path)==0), "created file with uid : " + doc.uid + " and path " + doc.path );
+      ok((doc.uid != null) && (doc.path.indexOf(root.path) == 0),
+          "created file with uid : " + doc.uid + " and path "
+              + doc.path);
       children.push(doc);
-      nextTest();
     };
 
     createOp = jQuery().automation("Document.Create", {
@@ -60,27 +92,28 @@ function createAndReadDocs(cb) {
       }
     });
 
-    createOp.execute(createdOK, failedCB);
-
+    createOp.execute(suite.newCallback(createdOK), failedCB);
   };
 
-  testSuite.push(createChild1);
-
-  var createChild2 = function() {
+  // **********************
+  // create second child
+  var testCreateChild2 = function() {
 
     createOp.addParameter("name", "TestFile2");
-    createOp.execute(createdOK, failedCB);
+    createOp.execute(suite.newCallback(createdOK), failedCB);
 
   };
 
-  testSuite.push(createChild2);
-
-  var updateChild2 = function() {
+  // **********************
+  // update second child
+  var testUpdateChild2 = function() {
 
     var updatedOK = function(doc, status, xhr) {
-      ok(doc.properties['dc:description']=="Simple File", "description updated ok " + doc.properties['dc:description']);
-      ok(doc.properties['dc:subjects'].length==2, "subject updated ok " + doc.properties['dc:subjects']);
-      nextTest();
+      ok(doc.properties['dc:description'] == "Simple File",
+          "description updated ok "
+              + doc.properties['dc:description']);
+      ok(doc.properties['dc:subjects'].length == 2, "subject updated ok "
+          + doc.properties['dc:subjects']);
     };
 
     var updateOp = jQuery()
@@ -96,43 +129,33 @@ function createAndReadDocs(cb) {
               }
             });
 
-    updateOp.execute(updatedOK, failedCB);
-
+    updateOp.execute(suite.newCallback(updatedOK), failedCB);
   };
 
-  testSuite.push(updateChild2);
+  // **********************
+  // read children
+  var testGetChildren = function() {
 
-  var getChildren = function() {
-
-      var displayChildren = function(docs, status, xhr) {
-        ok(docs.entries.length==2, "2 children");
-        nextTest();
-      };
-
-      var getChildren = jQuery()
-          .automation(
-              "Document.GetChildren",
-              {
-                automationParams : {
-                  input : "doc:" + root.path
-                }
-              });
-
-      getChildren.execute(displayChildren, failedCB);
-
+    var displayChildren = function(docs, status, xhr) {
+      ok(docs.entries.length == 2, "2 children");
     };
 
-  testSuite.push(getChildren);
+    var getChildren = jQuery().automation("Document.GetChildren", {
+      automationParams : {
+        input : "doc:" + root.path
+      }
+    });
 
-  if (cb) {
-    testSuite.push(cb);
-  }
-  nextTest();
+    getChildren.execute(suite.newCallback(displayChildren), failedCB);
+  };
+
+  suite.addTest(testCreateRoot);
+  suite.addTest(testCreateChild1);
+  suite.addTest(testCreateChild2);
+  suite.addTest(testUpdateChild2);
+  suite.addTest(testGetChildren);
+  suite.run();
+
 }
 
-asyncTest( "Create and read docs test", function() {
-    createAndReadDocs(function() {
-      ok( true, "Passed CRUD Tests" );
-      start();
-    });
-});
+runCreateAndReadDocsTestSuite();

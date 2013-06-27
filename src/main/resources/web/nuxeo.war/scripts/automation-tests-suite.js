@@ -1,4 +1,4 @@
-function runCreateAndReadDocsTestSuite() {
+function createAndReadDocsTestSuite() {
 
   var root = {};
   var children = [];
@@ -7,7 +7,7 @@ function runCreateAndReadDocsTestSuite() {
     alert(msg)
   };
 
-  var suite = new automationTestSuite(
+  var suite = new AutomationTestSuite(
       "create, update and read documents",
       [
           // **********************
@@ -135,7 +135,137 @@ function runCreateAndReadDocsTestSuite() {
             getChildren.execute(displayChildren, failedCB);
           } ]);
 
-  suite.run();
+  return suite;
 }
 
-runCreateAndReadDocsTestSuite();
+function paginationTestSuite() {
+
+    var root = {};
+    var failedCB = function(xhr, status, msg) {
+      alert(msg)
+    };
+
+    function testCreateChild(idx) {
+
+        function createdOK(doc, status, xhr) {
+          AssertThat((doc.uid != null)
+              && (doc.path.indexOf(root.path) == 0),
+              "created file with uid : " + doc.uid
+                  + " and path " + doc.path);
+        }
+        ;
+
+        createOp = jQuery().automation("Document.Create", {
+          automationParams : {
+            params : {
+              type : "File",
+              name : "TestFile" + idx
+            },
+            input : "doc:" + root.path
+          }
+        });
+
+        createOp.execute(createdOK, failedCB);
+      }
+
+
+    var suite = new AutomationTestSuite(
+        "create documents and check query and pagination",
+        [
+            // **********************
+            // create root
+            function testCreateRoot() {
+
+              function createdOK(doc, status, xhr) {
+                root = doc;
+                AssertThat(doc.uid, "created container with uid : "
+                    + doc.uid);
+              }
+              ;
+
+              var createOp = jQuery()
+                  .automation(
+                      "Document.Create",
+                      {
+                        automationParams : {
+                          params : {
+                            type : "Folder",
+                            name : "TestFolder1",
+                            properties : "dc:title=Test Folder2 \ndc:description=Simple container"
+                          },
+                          input : "doc:/"
+                        }
+                      });
+
+              createOp.execute(createdOK, failedCB);
+
+            },
+
+            // **********************
+            // create child 1
+            function testCreateChild1() { testCreateChild(1) },
+            // **********************
+            // create child 2
+            function testCreateChild2() { testCreateChild(2) },
+            // **********************
+            // create child 4
+            function testCreateChild3() { testCreateChild(3) },
+
+            // **********************
+            // do query
+            function testQueryPage1() {
+
+              function displayChildren(docs, status, xhr) {
+                AssertThat(docs.entries.length == 2, "should have 2 children");
+                AssertThat(docs.pageSize == 2, "page Size should be 2");
+                AssertThat(docs.pageCount == 2, "should have 2 pages");
+                AssertThat(docs.totalSize == 3, "total size should be 3");
+              }
+              ;
+
+              var getChildren = jQuery().automation(
+                  "Document.PageProvider", {
+                    automationParams : {
+                      params : {
+                        query  : "select * from Document where ecm:parentId = ?",
+                        pageSize : 2,
+                        page : 0,
+                        queryParams : root.uid
+                      }
+                    }
+                  });
+
+              getChildren.execute(displayChildren, failedCB);
+            },
+
+            function testQueryPage2() {
+
+                function displayChildren(docs, status, xhr) {
+                  AssertThat(docs.entries.length == 1, "should have 1 children on page 2");
+                  AssertThat(docs.pageSize == 2, "page Size should be 2");
+                  AssertThat(docs.pageCount == 2, "should have 2 pages");
+                  AssertThat(docs.totalSize == 3, "total size should be 3");
+                }
+                ;
+
+                var getChildren = jQuery().automation(
+                    "Document.PageProvider", {
+                      automationParams : {
+                        params : {
+                          query  : "select * from Document where ecm:parentId = ?",
+                          pageSize : 2,
+                          page : 1,
+                          queryParams : root.uid
+                        }
+                      }
+                    });
+
+                getChildren.execute(displayChildren, failedCB);
+              },
+
+            ]);
+
+    return suite;
+  }
+
+runSuites([ createAndReadDocsTestSuite(), paginationTestSuite()]);

@@ -158,8 +158,7 @@ AutomationWrapper.prototype = {
     if (window.console) {
       // console.log(msg);
     }
-  }
-  ,
+  },
   batchExecute : function(batchId, successCB, failureCB, voidOp) {
 
     if (!voidOp) {

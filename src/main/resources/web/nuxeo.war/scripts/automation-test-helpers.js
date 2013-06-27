@@ -1,11 +1,16 @@
 
-function automationTestSuite(suiteName) {
+function automationTestSuite(suiteName,testSuite) {
 
-  this.testSuite = [];
+  this.testSuite = testSuite;
   this.suiteName = suiteName;
+
+  if (!this.testSuite) {
+    this.testSuite=[];
+  }
 
   automationTestSuite.prototype.nextTest = function() {
     var targetTest = this.testSuite.shift();
+    console.log("running test " + targetTest.name);
     if (targetTest) {
       targetTest();
     }
@@ -24,13 +29,14 @@ function automationTestSuite(suiteName) {
   }
 
   automationTestSuite.prototype.run = function() {
+    console.log("running suite " + this.suiteName);
     var me = this;
-    var finish = function() {
+    function tearDown() {
       ok(true, "Suite '" + me.suiteName + "' completed OK !");
       me.unPatchAutomation();
       start();
     }
-    this.testSuite.push(finish);
+    this.testSuite.push(tearDown);
     this.patchAutomation();
     asyncTest(me.suiteName, function() {
       me.nextTest()
@@ -57,3 +63,5 @@ function automationTestSuite(suiteName) {
       AutomationWrapper.prototype.execute = AutomationWrapper.prototype.executeOld;
   }
 }
+
+AssertThat =  ok;

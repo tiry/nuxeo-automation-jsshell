@@ -1,39 +1,3 @@
-function automationTestSuite(suiteName) {
-
-  this.testSuite = [];
-  this.suiteName = suiteName;
-
-  automationTestSuite.prototype.nextTest = function() {
-    var targetTest = this.testSuite.shift();
-    if (targetTest) {
-      targetTest();
-    }
-  }
-
-  automationTestSuite.prototype.newCallback = function(cbFunction) {
-    var me = this;
-    return function(doc, status, xhr) {
-      cbFunction(doc, status, xhr);
-      me.nextTest();
-    }
-  }
-
-  automationTestSuite.prototype.addTest = function(testFunction) {
-    this.testSuite.push(testFunction);
-  }
-
-  automationTestSuite.prototype.run = function() {
-    var me = this;
-    var finish = function() {
-      ok(true, "Suite '" + me.suiteName + "' completed OK !");
-      start();
-    }
-    this.testSuite.push(finish);
-    asyncTest(me.suiteName, function() {
-      me.nextTest()
-    });
-  }
-}
 
 function runCreateAndReadDocsTestSuite() {
 
@@ -44,38 +8,42 @@ function runCreateAndReadDocsTestSuite() {
     alert(msg)
   };
 
-  var suite = new automationTestSuite("create, update and read documents");
+  var createOp;
 
-  var createOp = jQuery()
-      .automation(
-          "Document.Create",
-          {
-            automationParams : {
-              params : {
-                type : "Folder",
-                name : "TestFolder1",
-                properties : "dc:title=Test Folder2 \ndc:description=Simmple container"
-              },
-              input : "doc:/"
-            }
-          });
+  var suite = new automationTestSuite("create, update and read documents");
 
   // **********************
   // create root
-  var testCreateRoot = function() {
-    var createdOK = function(doc, status, xhr) {
+  function testCreateRoot() {
+
+    function createdOK (doc, status, xhr) {
       root = doc;
       ok(doc.uid, "created container with uid : " + doc.uid);
     };
 
-    createOp.execute(suite.newCallback(createdOK), failedCB);
+    createOp = jQuery()
+        .automation(
+            "Document.Create",
+            {
+              automationParams : {
+                params : {
+                  type : "Folder",
+                  name : "TestFolder1",
+                  properties : "dc:title=Test Folder2 \ndc:description=Simple container"
+                },
+                input : "doc:/"
+              }
+            });
+
+    createOp.execute(createdOK, failedCB);
+
   };
 
   // **********************
   // create first child
-  var testCreateChild1 = function() {
+  function testCreateChild1() {
 
-    createdOK = function(doc, status, xhr) {
+    function createdOK(doc, status, xhr) {
       ok((doc.uid != null) && (doc.path.indexOf(root.path) == 0),
           "created file with uid : " + doc.uid + " and path "
               + doc.path);
@@ -92,23 +60,30 @@ function runCreateAndReadDocsTestSuite() {
       }
     });
 
-    createOp.execute(suite.newCallback(createdOK), failedCB);
+    createOp.execute(createdOK, failedCB);
   };
 
   // **********************
   // create second child
-  var testCreateChild2 = function() {
+  function testCreateChild2() {
+
+    function createdOK(doc, status, xhr) {
+      ok((doc.uid != null) && (doc.path.indexOf(root.path) == 0),
+          "created file with uid : " + doc.uid + " and path "
+              + doc.path);
+      children.push(doc);
+    };
 
     createOp.addParameter("name", "TestFile2");
-    createOp.execute(suite.newCallback(createdOK), failedCB);
+    createOp.execute(createdOK, failedCB);
 
   };
 
   // **********************
   // update second child
-  var testUpdateChild2 = function() {
+  function testUpdateChild2() {
 
-    var updatedOK = function(doc, status, xhr) {
+    function updatedOK(doc, status, xhr) {
       ok(doc.properties['dc:description'] == "Simple File",
           "description updated ok "
               + doc.properties['dc:description']);
@@ -129,14 +104,14 @@ function runCreateAndReadDocsTestSuite() {
               }
             });
 
-    updateOp.execute(suite.newCallback(updatedOK), failedCB);
+    updateOp.execute(updatedOK, failedCB);
   };
 
   // **********************
   // read children
-  var testGetChildren = function() {
+  function testGetChildren() {
 
-    var displayChildren = function(docs, status, xhr) {
+    function displayChildren (docs, status, xhr) {
       ok(docs.entries.length == 2, "2 children");
     };
 
@@ -146,7 +121,7 @@ function runCreateAndReadDocsTestSuite() {
       }
     });
 
-    getChildren.execute(suite.newCallback(displayChildren), failedCB);
+    getChildren.execute(displayChildren, failedCB);
   };
 
   suite.addTest(testCreateRoot);
@@ -154,8 +129,8 @@ function runCreateAndReadDocsTestSuite() {
   suite.addTest(testCreateChild2);
   suite.addTest(testUpdateChild2);
   suite.addTest(testGetChildren);
-  suite.run();
 
+  suite.run();
 }
 
 runCreateAndReadDocsTestSuite();

@@ -67,10 +67,24 @@ function AutomationTestSuite(suiteName,testSuite) {
             me.nextTest();
           }, failed, voidOp);
     };
+
+    var targetExecMP = AutomationWrapper.prototype.executeMultiPart;
+    if (AutomationWrapper.prototype.executeMultiPartOld) {
+      targetExecMP = AutomationWrapper.prototype.executeMultiPartOld;
+    }
+    AutomationWrapper.prototype.executeMultiPartOld = targetExecMP;
+    AutomationWrapper.prototype.executeMultiPart = function(blob, filename, success, failed, voidOp) {
+        this.executeMultiPartOld(blob, filename, function(doc, status, xhr) {
+            success(doc, status, xhr);
+            me.nextTest();
+          }, failed, voidOp);
+    };
+
   }
 
   AutomationTestSuite.prototype.unPatchAutomation = function() {
       AutomationWrapper.prototype.execute = AutomationWrapper.prototype.executeOld;
+      AutomationWrapper.prototype.executeMultiPart = AutomationWrapper.prototype.executeMultiPartOld;
   }
 }
 

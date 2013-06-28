@@ -28,8 +28,8 @@ function createAndReadDocsTestSuite() {
                       automationParams : {
                         params : {
                           type : "Folder",
-                          name : "TestFolder1",
-                          properties : "dc:title=Test Folder2 \ndc:description=Simple container"
+                          name : "TestDocs",
+                          properties : "dc:title=Test Docs \ndc:description=Simple container"
                         },
                         input : "doc:/"
                       }
@@ -190,8 +190,8 @@ function paginationTestSuite() {
                         automationParams : {
                           params : {
                             type : "Folder",
-                            name : "TestFolder1",
-                            properties : "dc:title=Test Folder2 \ndc:description=Simple container"
+                            name : "TestPagination",
+                            properties : "dc:title=Test Pagination \ndc:description=Simple container"
                           },
                           input : "doc:/"
                         }
@@ -212,7 +212,7 @@ function paginationTestSuite() {
             function testCreateChild3() { testCreateChild(3) },
 
             // **********************
-            // do query
+            // do query for page 1
             function testQueryPage1() {
 
               function displayChildren(docs, status, xhr) {
@@ -238,6 +238,8 @@ function paginationTestSuite() {
               getChildren.execute(displayChildren, failedCB);
             },
 
+            // **********************
+            // do query for page 2
             function testQueryPage2() {
 
                 function displayChildren(docs, status, xhr) {
@@ -268,4 +270,106 @@ function paginationTestSuite() {
     return suite;
   }
 
-runSuites([ createAndReadDocsTestSuite(), paginationTestSuite()]);
+function directBlobUploadTestSuite() {
+
+    var root = {};
+    var failedCB = function(xhr, status, msg) {
+      alert(msg)
+    };
+
+    var suite = new AutomationTestSuite(
+        "create documents from Blob using muti-part encoding",
+        [
+            // **********************
+            // create root
+            function testCreateRoot() {
+
+              function createdOK(doc, status, xhr) {
+                root = doc;
+                AssertThat(doc.uid, "created container with uid : "
+                    + doc.uid);
+              }
+              ;
+
+              var createOp = jQuery()
+                  .automation(
+                      "Document.Create",
+                      {
+                        automationParams : {
+                          params : {
+                            type : "Folder",
+                            name : "TestBlobs",
+                            properties : "dc:title=Test Blobs \ndc:description=Simple container"
+                          },
+                          input : "doc:/"
+                        }
+                      });
+
+              createOp.execute(createdOK, failedCB);
+
+            },
+            // **********************
+            // create Blob1 (txt)
+            function testCreateBlobText() {
+
+              function createdOK(doc, status, xhr) {
+                AssertThat(doc.type=='Note', "created new doc of type " + doc.type);
+              };
+
+              var createOp = jQuery().automation(
+                                  "FileManager.Import",
+                                  {
+                                    automationParams : {
+                                      params : { },
+                                      context : { currentDocument : root.path}
+                                    }
+                                  });
+
+              var blob = new Blob(["some content in plain text"],{"type" : "text/plain"});
+              createOp.executeMultiPart(blob, "testMe.txt", createdOK, failedCB);
+            },
+            // **********************
+            // create Blob2 (bin)
+            function testCreateBlobBin() {
+
+              function createdOK(doc, status, xhr) {
+                AssertThat(doc.type=='File', "created new doc of type " + doc.type);
+              };
+
+              var createOp = jQuery().automation(
+                                  "FileManager.Import",
+                                  {
+                                    automationParams : {
+                                      params : { },
+                                      context : { currentDocument : root.path}
+                                    }
+                                  });
+
+              var blob = new Blob(["some fake bin content"],{"type" : "application/something"});
+              createOp.executeMultiPart(blob, "testBin.bin", createdOK, failedCB);
+            },
+
+            // **********************
+            // read children
+            function testGetChildren() {
+
+              function displayChildren(docs, status, xhr) {
+                AssertThat(docs.entries.length == 2, "2 children");
+              }
+              ;
+
+              var getChildren = jQuery().automation(
+                  "Document.GetChildren", {
+                    automationParams : {
+                      input : "doc:" + root.path
+                    }
+                  });
+
+              getChildren.execute(displayChildren, failedCB);
+            }
+            ]);
+
+    return suite;
+  }
+
+runSuites([createAndReadDocsTestSuite(),paginationTestSuite(), directBlobUploadTestSuite()]);

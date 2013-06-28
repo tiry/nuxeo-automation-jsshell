@@ -99,6 +99,69 @@ AutomationWrapper.prototype = {
   }
 
   ,
+  executeMultiPart : function(blob,filename, successCB, failureCB, voidOp) {
+    var targetUrl = this.opts.url;
+    if (targetUrl.indexOf("/", targetUrl.length - 1) == -1) {
+      targetUrl = targetUrl + "/";
+    }
+    targetUrl = targetUrl + this.operationId;
+
+    if (!voidOp) {
+      voidOp = false;
+    }
+
+    var automationParams = {params:this.opts.automationParams.params,context: this.opts.automationParams.context};
+    var params = new Blob([JSON.stringify(automationParams)],{"type" : "application/json+nxrequest"});
+
+    var formData = new FormData();
+    formData.append("request", params, "request");
+    formData.append(filename, blob, filename);
+
+    var timeout = 5 + (this.opts.execTimeout / 1000) | 0;
+    var documentSchemas = this.opts.documentSchemas;
+    var repo = this.opts.repository;
+    jQuery.ajax({
+      type : 'POST',
+      processData: false,
+      contentType: false,
+      data : formData,
+      beforeSend : function(xhr) {
+        xhr.setRequestHeader('X-NXVoidOperation', voidOp);
+        xhr.setRequestHeader('Nuxeo-Transaction-Timeout', timeout);
+        if (documentSchemas.length > 0) {
+          xhr.setRequestHeader('X-NXDocumentProperties',
+              documentSchemas);
+        }
+        if (repo) {
+          xhr.setRequestHeader('X-NXRepository', repo);
+        }
+      },
+      url : targetUrl,
+      timeout : this.opts.execTimeout,
+      error : function(xhr, status, e) {
+        if (failureCB) {
+          failureCB(xhr, status, "No Data");
+        } else {
+          log("Failed to execute");
+          log("Error, Status =" + status);
+        }
+      },
+      success : function(data, status, xhr) {
+        log("Executed OK");
+        if (status == "success") {
+          successCB(data, status, xhr);
+        } else {
+          if (failureCB) {
+            failureCB(xhr, status, "No Data");
+          } else {
+            log("Error, Status =" + status);
+          }
+        }
+      }
+    })
+  }
+
+  ,
   executeGetBlob : function(successCB, failureCB, blobOp) {
 
     var targetUrl = this.opts.url;

@@ -45,120 +45,88 @@ AutomationWrapper.prototype = {
   }
 
   ,
-  execute : function(successCB, failureCB, voidOp) {
-    var targetUrl = this.opts.url;
-    if (targetUrl.indexOf("/", targetUrl.length - 1) == -1) {
-      targetUrl = targetUrl + "/";
-    }
-    targetUrl = targetUrl + this.operationId;
+  buildXHRParams : function(successCB, failureCB, voidOp) {
 
-    if (!voidOp) {
-      voidOp = false;
-    }
-    var timeout = 5 + (this.opts.execTimeout / 1000) | 0;
+    var txTimeout = 5 + (this.opts.execTimeout / 1000) | 0;
+    var xhrTimeout = this.opts.uploadTimeout;
     var documentSchemas = this.opts.documentSchemas;
     var repo = this.opts.repository;
-    jQuery.ajax({
-      type : 'POST',
-      contentType : 'application/json+nxrequest',
-      data : JSON.stringify(this.opts.automationParams),
-      beforeSend : function(xhr) {
-        xhr.setRequestHeader('X-NXVoidOperation', voidOp);
-        xhr.setRequestHeader('Nuxeo-Transaction-Timeout', timeout);
-        if (documentSchemas.length > 0) {
-          xhr.setRequestHeader('X-NXDocumentProperties',
-              documentSchemas);
-        }
-        if (repo) {
-          xhr.setRequestHeader('X-NXRepository', repo);
-        }
-      },
-      url : targetUrl,
-      timeout : this.opts.execTimeout,
-      error : function(xhr, status, e) {
-        if (failureCB) {
-          failureCB(xhr, status, "No Data");
-        } else {
-          log("Failed to execute");
-          log("Error, Status =" + status);
-        }
-      },
-      success : function(data, status, xhr) {
-        log("Executed OK");
-        if (status == "success") {
-          successCB(data, status, xhr);
-        } else {
+    if (!voidOp) {
+        voidOp = false;
+    }
+    return {
+        type : 'POST',
+        beforeSend : function(xhr) {
+          xhr.setRequestHeader('X-NXVoidOperation', voidOp);
+          xhr.setRequestHeader('Nuxeo-Transaction-Timeout', txTimeout);
+          if (documentSchemas.length > 0) {
+            xhr.setRequestHeader('X-NXDocumentProperties',
+                documentSchemas);
+          }
+          if (repo) {
+            xhr.setRequestHeader('X-NXRepository', repo);
+          }
+        },
+        timeout : this.opts.execTimeout,
+        error : function(xhr, status, e) {
           if (failureCB) {
             failureCB(xhr, status, "No Data");
           } else {
+            log("Failed to execute");
             log("Error, Status =" + status);
           }
+        },
+        success : function(data, status, xhr) {
+          log("Executed OK");
+          if (status == "success") {
+            successCB(data, status, xhr);
+          } else {
+            if (failureCB) {
+              failureCB(xhr, status, "No Data");
+            } else {
+              log("Error, Status =" + status);
+            }
+          }
         }
+      };
+
+  },
+
+  getTargetUrl: function () {
+
+      var targetUrl = this.opts.url;
+      if (targetUrl.indexOf("/", targetUrl.length - 1) == -1) {
+        targetUrl = targetUrl + "/";
       }
-    })
+      targetUrl = targetUrl + this.operationId;
+
+      return targetUrl;
+  },
+
+  execute : function(successCB, failureCB, voidOp) {
+    var xhrParams = this.buildXHRParams(successCB, failureCB, voidOp);
+    xhrParams.url = this.getTargetUrl();
+    xhrParams.data = JSON.stringify(this.opts.automationParams);
+    xhrParams.contentType = 'application/json+nxrequest';
+    jQuery.ajax(xhrParams);
   }
 
   ,
   executeMultiPart : function(blob,filename, successCB, failureCB, voidOp) {
-    var targetUrl = this.opts.url;
-    if (targetUrl.indexOf("/", targetUrl.length - 1) == -1) {
-      targetUrl = targetUrl + "/";
-    }
-    targetUrl = targetUrl + this.operationId;
-
-    if (!voidOp) {
-      voidOp = false;
-    }
 
     var automationParams = {params:this.opts.automationParams.params,context: this.opts.automationParams.context};
     var params = new Blob([JSON.stringify(automationParams)],{"type" : "application/json+nxrequest"});
-
     var formData = new FormData();
     formData.append("request", params, "request");
     formData.append(filename, blob, filename);
 
-    var timeout = 5 + (this.opts.execTimeout / 1000) | 0;
-    var documentSchemas = this.opts.documentSchemas;
-    var repo = this.opts.repository;
-    jQuery.ajax({
-      type : 'POST',
-      processData: false,
-      contentType: false,
-      data : formData,
-      beforeSend : function(xhr) {
-        xhr.setRequestHeader('X-NXVoidOperation', voidOp);
-        xhr.setRequestHeader('Nuxeo-Transaction-Timeout', timeout);
-        if (documentSchemas.length > 0) {
-          xhr.setRequestHeader('X-NXDocumentProperties',
-              documentSchemas);
-        }
-        if (repo) {
-          xhr.setRequestHeader('X-NXRepository', repo);
-        }
-      },
-      url : targetUrl,
-      timeout : this.opts.execTimeout,
-      error : function(xhr, status, e) {
-        if (failureCB) {
-          failureCB(xhr, status, "No Data");
-        } else {
-          log("Failed to execute");
-          log("Error, Status =" + status);
-        }
-      },
-      success : function(data, status, xhr) {
-        log("Executed OK");
-        if (status == "success") {
-          successCB(data, status, xhr);
-        } else {
-          if (failureCB) {
-            failureCB(xhr, status, "No Data");
-          } else {
-            log("Error, Status =" + status);
-          }
-        }
-      }
-    })
+    var xhrParams = this.buildXHRParams(successCB, failureCB, voidOp);
+    xhrParams.url = this.getTargetUrl();
+    xhrParams.data = formData;
+    xhrParams.processData = false;
+    xhrParams.contentType = false;
+
+    jQuery.ajax(xhrParams);
   }
 
   ,
@@ -304,7 +272,7 @@ AutomationWrapper.prototype = {
   $.fn.automation.defaults = {
     url : nxContextPath + "/site/automation",
     execTimeout : 30000,
-    uploadTimeout : 30000,
+    uploadTimeout : 20*60*1000,
     documentSchemas : "dublincore",
     automationParams : {
       params : {},

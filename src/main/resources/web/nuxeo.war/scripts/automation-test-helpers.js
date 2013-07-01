@@ -11,11 +11,11 @@ function AutomationTestSuite(suiteName,testSuite) {
 
   AutomationTestSuite.prototype.nextTest = function() {
     var targetTest = this.testSuite.shift();
-    console.log("running test " + targetTest.name);
     if (targetTest) {
+      console.log("running test " + targetTest.name);
       targetTest();
     } else {
-      conssole.log("no more tests");
+      console.log("no more tests");
     }
   }
 
@@ -80,14 +80,29 @@ function AutomationTestSuite(suiteName,testSuite) {
           }, failed, voidOp);
     };
 
+    /*
+    var targetExecBatch = AutomationWrapper.prototype.batchExecute;
+    if (AutomationWrapper.prototype.batchExecuteOld) {
+      targetExecBatch = AutomationWrapper.prototype.batchExecuteOld;
+    }
+    AutomationWrapper.prototype.batchExecuteOld = targetExecBatch;
+    AutomationWrapper.prototype.batchExecute = function(batchId, success, failed, voidOp) {
+        this.batchExecuteOld(batchId, function(doc, status, xhr) {
+            success(doc, status, xhr);
+            me.nextTest();
+          }, failed, voidOp);
+    };*/
+
   }
 
   AutomationTestSuite.prototype.unPatchAutomation = function() {
       AutomationWrapper.prototype.execute = AutomationWrapper.prototype.executeOld;
       AutomationWrapper.prototype.executeMultiPart = AutomationWrapper.prototype.executeMultiPartOld;
+      //AutomationWrapper.prototype.batchExecute = AutomationWrapper.prototype.batchExecuteOld;
   }
 }
 
+// alias
 AssertThat =  ok;
 
 function runSuites(suites) {

@@ -372,4 +372,117 @@ function directBlobUploadTestSuite() {
     return suite;
   }
 
-runSuites([createAndReadDocsTestSuite(),paginationTestSuite(), directBlobUploadTestSuite()]);
+
+function batchBlobUploadTestSuite() {
+
+    var root = {};
+    var failedCB = function(xhr, status, msg) {
+      alert(msg)
+    };
+
+    var createOp;
+
+    var suite = new AutomationTestSuite(
+        "create documents from Blob using batch manager",
+        [
+            // **********************
+            // create root
+            function testCreateRoot() {
+
+              function createdOK(doc, status, xhr) {
+                root = doc;
+                AssertThat(doc.uid, "created container with uid : "
+                    + doc.uid);
+              }
+              ;
+
+              var createOp = jQuery()
+                  .automation(
+                      "Document.Create",
+                      {
+                        automationParams : {
+                          params : {
+                            type : "Folder",
+                            name : "TestBlobs",
+                            properties : "dc:title=Test Blobs Batch \ndc:description=Simple container"
+                          },
+                          input : "doc:/"
+                        }
+                      });
+
+              createOp.execute(createdOK, failedCB);
+
+            },
+            // **********************
+            // create Blob1 (txt)
+            function testUploadBlobText() {
+
+              function uploadedOK(fileIndex, fileObj) {
+                AssertThat(fileIndex==0, "uploaded file1");
+                suite.nextTest();
+              };
+
+              createOp = jQuery().automation(
+                                  "FileManager.Import",
+                                  {
+                                    automationParams : {
+                                      params : { },
+                                      context : { currentDocument : root.path}
+                                    }
+                                  });
+
+              var fakeFile = {filename : "testMe.txt",type : "text/plain", size : "26", fakeData : 'some content in plain text'};
+              createOp.uploader().uploadFile(fakeFile, uploadedOK);
+            },
+
+            // **********************
+            // create Blob2 (bin)
+            function testUploadBlobBin() {
+
+              function uploadedOK(fileIndex, fileObj) {
+                  AssertThat(fileIndex==1, "uploaded file2");
+                  suite.nextTest();
+              };
+
+              var fakeFile = {filename : "testBin.bin",type : "application/something", size : "21", fakeData : 'some fake bin content'};
+              createOp.uploader().uploadFile(fakeFile, uploadedOK);
+            },
+
+            // **********************
+            // do import
+            function testDoImport() {
+
+              function createdOK(docs, status, xhr) {
+                AssertThat(docs.entries.length==2, "created 2 docs in one call");
+                suite.nextTest();
+              };
+
+              var fakeFile = {filename : "testBin.bin",type : "application/something", size : "21", fakeData : 'some fake bin content'};
+              createOp.uploader().execute(createdOK, failedCB);
+            },
+
+
+            // **********************
+            // read children
+            function testGetChildren() {
+
+              function displayChildren(docs, status, xhr) {
+                AssertThat(docs.entries.length == 2, "check that we have 2 children");
+              }
+              ;
+
+              var getChildren = jQuery().automation(
+                  "Document.GetChildren", {
+                    automationParams : {
+                      input : "doc:" + root.path
+                    }
+                  });
+
+              getChildren.execute(displayChildren, failedCB);
+            }
+            ]);
+
+    return suite;
+  }
+
+runSuites([createAndReadDocsTestSuite(),paginationTestSuite(), directBlobUploadTestSuite(),batchBlobUploadTestSuite()]);

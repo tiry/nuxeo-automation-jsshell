@@ -24,16 +24,16 @@ function nxshell() {
       if (target.indexOf("/")!=0) {
         target = me.ctx.path + target;
       }
-      var automation = jQuery().automation('Document.Fetch' , { automationParams : {params : { value : target}}});
-      var successCB = function(data, status,xhr) {
-        me.ctx.path = data.path;
-        me.ctx.doc = data;
-        term.echo(" current Document is now " + me.prettyPrint(data));
-      };
-      var errorCB = function(xhr,status) {
-        term.echo("Error " + status);
-      };
-      automation.execute(successCB, errorCB);
+      nuxeo.operation('Document.Fetch' , { automationParams : {params : { value : target}}})
+        .done(function(data, status,xhr) {
+          me.ctx.path = data.path;
+          me.ctx.doc = data;
+          term.echo(" current Document is now " + me.prettyPrint(data));
+        })
+        .fail(function(xhr,status) {
+          term.echo("Error " + status);
+        })
+        .execute()
     }
   }
 
@@ -41,12 +41,13 @@ function nxshell() {
     var me = this;
     var target = this.ctx.doc.uid;
     // XXX manage path ref !
-    var automation = jQuery().automation('Document.PageProvider' , { automationParams :
-     {params :
-      { query : "select * from Document where ecm:parentId = ? AND ecm:isCheckedInVersion= 0",
-        queryParams : target ,
-        pageSize : 5,
-        page : 1
+    var operation = nuxeo.operation('Document.PageProvider' , {
+      automationParams: {
+        params: {
+          query: "select * from Document where ecm:parentId = ? AND ecm:isCheckedInVersion= 0",
+          queryParams: target ,
+          pageSize: 5,
+          page: 1
        }
      }
     });
@@ -68,17 +69,17 @@ function nxshell() {
        displayPage(term, function() { fetchPage(prevIdx, term)}, function() { fetchPage(nextIdx, term)})
     }
 
-    var successCB = function(data, status,xhr, term) {
-        doDisplayPage(data, term);
-      };
+    function successCB(data, status,xhr, term) {
+      doDisplayPage(data, term);
+    };
 
-    var errorCB = function(xhr,status, term) {
-        term.echo("Error " + status);
-      };
+    function errorCB(xhr,status, term) {
+      term.echo("Error " + status);
+    };
 
     var fetchPage = function (page, term) {
-      automation.addParameter("page", page);
-      automation.execute(function(data, status,xhr) {return successCB(data,status,xhr,term)}, function(xhr,status) {return errorCB(xhr, status, term)});
+      operation.param("page", page);
+      operation.done(successCB).fail(errorCB).execute();
     }
 
     fetchPage(1, term);
@@ -158,15 +159,14 @@ function nxshell() {
            }
          }
 
-         var automation = jQuery().automation(op.id , opts);
-         var successCB = function(data, status,xhr) {
-           term.echo(me.prettyPrint(data));
-         };
-         var errorCB = function(xhr,status) {
-           term.echo("Error " + status);
-         };
-
-         automation.execute(successCB, errorCB);
+         nuxeo.operation(op.id, opts)
+          .done(function(data, status,xhr) {
+            term.echo(me.prettyPrint(data));
+          })
+          .fail(function(xhr,status) {
+            term.echo("Error " + status);
+          })
+          .execute()
        }
        console.log(cmd);
   }

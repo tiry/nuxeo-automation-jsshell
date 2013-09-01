@@ -5,12 +5,13 @@
       nuxeo.shell_builtins={};
     }
 
-    function nxshell() {
+    function nxshell(opts) {
 
       this.automationDefs= [];
       this.builtins = [];
       this.ctx = { path : "/" };
-
+      this.opts = opts;
+      
       var me = this;
       var shell = this;
 
@@ -21,9 +22,13 @@
           if (name.indexOf("Cmd")>0){
             name = name.substring(0,name.indexOf("Cmd"));
           }
+          if (name.indexOf("Help")>0){
+            continue;
+          }
           var builtin = function(k) { return function(cmds, term) { return builtInsDefs[k](cmds, term, shell)}}(key);
+          var helpStr =  builtInsDefs[name + "Help"];
 
-          shell.builtins.push({ id : name, impl : builtin});
+          shell.builtins.push({ id : name, impl : builtin, help : helpStr});
         }
       }
 
@@ -31,7 +36,8 @@
           return this.automationDefs;
       }
 
-      nxshell.prototype.displayPage = function (term, prevPageCB, nextPageCB) {
+      nxshell.prototype.displayNavigationPrompt = function (term, prevPageCB, nextPageCB) {
+        term.set_prompt("( use arrows to navigate between pages - q to quit )");
         term.push(jQuery.noop, {      
           keydown: function(e) {
             if (e.which === 38 ) { //up
@@ -44,10 +50,39 @@
                nextPageCB();
             } else if (e.which == 81) { //Q
               term.pop();
+              term.set_prompt(opts.prompt);
             }
           }
         });
       }
+
+      nxshell.prototype.displayPages = function (term, list, pageSize, offset) {
+
+        for (var idx = offset; (idx < list.length) && (idx < offset + pageSize) ; idx++) {
+          term.echo(list[idx]);
+        }
+
+        var nextCB = function() {
+          me.displayPages(term, list, pageSize, offset+pageSize);
+        }
+        var prevCB = function() {
+          me.displayPages(term, list, pageSize, offset-pageSize);
+        }
+        if (offset+pageSize> list.length) {
+          term.echo(" ... end of listing ... ");
+          nextCB = function() {
+              term.pop();
+              term.set_prompt(opts.prompt);            
+          }
+        }
+        if (offset-pageSize< 0) {
+          prevCB = function() {};
+        }
+
+        me.displayNavigationPrompt(term, prevCB, nextCB);
+
+      }
+
 
       nxshell.prototype.nxGreetings = function () {
           var head = "";
@@ -76,15 +111,58 @@
             });
        }
 
+      nxshell.prototype.displayHelp = function (cmd, term) {
+        if (cmd === undefined) {
+          term.echo("use help 'commandName' to get help on the command or operation named 'commandName'");
+          term.echo("use help cmds to list all commands");
+          term.echo("use help ops to list all operations");
+        } else if (cmd == 'cmds') {
+          for (var idx=0; idx < this.builtins.length; idx++) {
+            term.echo("[[b;#00EE00;#0]" + this.builtins[idx].id + "] : [[i;#CCCCCC;#0]" + this.builtins[idx].help + "]");
+          }
+        } else if (cmd == 'ops') {
+          var lines = [];
+          for (var idx=0; idx < this.automationDefs.operations.length; idx++) {
+            lines.push("[[b;#00EE00;#0]" + this.automationDefs.operations[idx].id + "] : [[i;#CCCCCC;#0]" + this.automationDefs.operations[idx].label + "]");
+          }
+          this.displayPages(term, lines, 10, 0);
+        } else {
+          var cmdOp = this.findBuiltin(cmd);
+          if (cmdOp) {
+            term.echo(cmdOp.help);
+          } else {
+           var op = this.findOperation(cmd); 
+           if (op) {
+            term.echo(op.label);
+            term.echo(op.description);
+            term.echo(JSON.stringify(op.signature));
+           } else {
+            term.echo("unknown command " + cmd);
+           }
+          }
+        }
+      }
+
       nxshell.prototype.nxTermHandler = function (cmd, term) {
            var cmds = cmd.split(" ");
 
            var me = this;
+           // help
+           if(cmds[0]=="help" || cmds[0]=="?") {
+            if (cmds.length>1) {
+              this.displayHelp(cmds[1], term);
+            } else {
+              this.displayHelp(undefined,term);
+            }
+            return;
+           }
+           // built-ins
            var cmd = this.findBuiltin(cmds[0]);
            if (cmd) {
              cmd.impl(cmds, term);
              return;
            }
+           // operations
            var op = this.findOperation(cmds[0]);
            if (op) {
              var opts = {automationParams : { params : {},
@@ -104,17 +182,21 @@
               .fail(function(xhr,status) {
                 term.echo("Error " + status);
               })
-              .execute()
+              .execute();
+              return;
            }
-           console.log(cmd);
+
+           if (cmds[0]!="") {
+            term.echo("command [[b;#EE9900;#0]" + cmds[0] + "] not found");
+           }
       }
 
       nxshell.prototype.printDoc = function (doc) {
         var title = doc.title;
         if (!title) {
-          title = doc.uid;
+          title = "";
         }
-        return title + " " + doc.path + " (" + doc.type + ")";
+        return "[" + doc.uid + "] " + doc.path + "'" + title + "' " + doc.path + " (" + doc.type + ")";
       }
 
       nxshell.prototype.prettyPrint = function (ob) {
@@ -172,7 +254,16 @@
                callback(suggestions);
              }
             } else {
+              // suggest
               var cmd = input.split(" ")[0];
+              // cmds
+              for (var idx=0; idx < this.builtins.length; idx++) {
+                var cmdOp = this.builtins[idx];
+                if (cmdOp.id.indexOf(cmd)==0) {
+                  suggestions.push(cmdOp.id);
+                }
+              }
+              // operations
               for (var idx=0; idx < this.automationDefs.operations.length; idx++) {
                 var op = this.automationDefs.operations[idx];
                 if (op.id.indexOf(cmd)==0) {
@@ -182,36 +273,42 @@
                   break;
                 }
               }
-              for (var idx=0; idx < this.builtins.length; idx++) {
-                  var op = this.builtins[idx];
-                  if (op.id.indexOf(cmd)==0) {
-                    suggestions.push(op.id);
-                  }
-                  if (suggestions.length > 5) {
-                    break;
-                  }
+              // chains
+              for (var idx=0; idx < this.automationDefs.chains.length; idx++) {
+                var op = this.automationDefs.chains[idx];
+                if (op.id.indexOf(cmd)==0) {
+                  suggestions.push(op.id);
                 }
+                if (suggestions.length > 5) {
+                  break;
+                }
+              }              
+
               callback(suggestions);
             }
           }
         }
 
-        // **************************
-        // init shell object
-        // 1 - init BuiltIns
-        initBuiltIns();
-        // 2 - fetch Operation definitions
-        this.fetchAutomationDefs();
-        // 3 - fetch Root Document to init context
-        nuxeo.operation('Document.Fetch' , { automationParams : {params : { value : "/"}}})
-                  .done(function(data, status,xhr) {
-                    me.ctx.path = data.path;
-                    me.ctx.doc = data;                
-                  })
-                  .fail(function(xhr,status) {
-                    console.log("Error " + status);
-                  })
-                  .execute();
+        nxshell.prototype.init = function(term) {
+          // **************************
+          // init shell object
+          // 1 - init BuiltIns
+          initBuiltIns();
+          // 2 - fetch Operation definitions
+          this.fetchAutomationDefs();
+          // 3 - fetch Root Document to init context
+          nuxeo.operation('Document.Fetch' , { automationParams : {params : { value : "/"}}})
+                    .done(function(data, status,xhr) {
+                      me.ctx.path = data.path;
+                      me.ctx.doc = data;                
+                      term.echo("Connected on repository '" + data.repository + "'");
+                      term.echo(" current path is " + data.path + "(" + data.uid + ")");
+                    })
+                    .fail(function(xhr,status) {
+                      console.log("Error " + status);
+                    })
+                    .execute();
+        }
         
     };
 
@@ -222,10 +319,11 @@
    }
 
    nuxeo.shell = function(filter, opts) {
-       var nx = new nxshell();
-       var opts = jQuery.extend({}, nuxeo.DEFAULT_NXSHELL , opts);
+       opts = jQuery.extend({}, nuxeo.DEFAULT_NXSHELL , opts);
+       var nx = new nxshell(opts);
        opts.greetings = function() { return nx.nxGreetings()};
        opts.completion =  function (term,input,callback)  { return nx.completion(term,input,callback)};
+       opts.onInit = function(term) { return nx.init(term)};
        jQuery(filter).terminal(function (cmd, term) 
                     { 
                       return nx.nxTermHandler(cmd, term)

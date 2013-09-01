@@ -19,6 +19,8 @@
               .execute()
           }
         },
+      cdHelp : "Change current remote directory",
+
       pwdCmd  : function (cmds, term, shell) {
         if (shell.ctx.doc) {
           term.echo(" current Document is " + shell.prettyPrint(shell.ctx.doc));
@@ -26,6 +28,11 @@
           term.echo(" current Path is " + shell.ctx.path);
         }
       },
+      
+      pwdHelp : "Return current remote directory",
+      
+      lsHelp : "lists children in current directory",
+
       lsCmd : function (cmds, term, shell) {
         var target = shell.ctx.doc.uid;
         // XXX manage path ref !
@@ -40,25 +47,28 @@
          }
         });
         var doDisplayPage = function(docs, term) {
-           term.echo("  [ display page : " + (docs.pageIndex+1) + "/" + docs.pageCount + "]");
            for (var i =0 ; i < docs.entries.length; i++) {
-             term.echo(docs.entries[i].uid);
+             term.echo(shell.printDoc(docs.entries[i]));
            }           
            var idx = docs.pageIndex;  
            var prevIdx = idx-1;
            var nextIdx = idx+1;
-           if (prevIdx < 0) { prevIdx = 0};
-           if (nextIdx > (docs.pageCount-1)) {          
-              term.echo("  ( end of listing ) ");
-              if (prevIdx>0) {
-                displayPage(term, function() { fetchPage(prevIdx, term)}, 
-                                  function() { term.echo("finito!!!");}
-                            )
-              }
-           } else {
-             term.echo("  ( use arrows to navigate between pages ) ");
-             shell.displayPage(term, function() { console.log("fetch " + prevIdx);  fetchPage(prevIdx, term)}, function() { console.log("fetch " + nextIdx);  fetchPage(nextIdx, term)})
+
+           var prevCB = function() { fetchPage(prevIdx, term)};
+           var nextCB = function() { fetchPage(nextIdx, term)};
+
+           if (prevIdx < 0) { 
+            prevCB = function(){};
+           };
+           if (nextIdx > (docs.pageCount-1)) {
+            nextCB = function(){
+              term.echo("... no more items to display ... exit");
+              term.pop();
+              term.set_prompt(shell.opts.prompt);
+            };
            }
+           term.echo("  [ display page : " + (docs.pageIndex+1) + "/" + docs.pageCount + "]");           
+           shell.displayNavigationPrompt(term,prevCB,nextCB);
         }
 
         function successCB(data, status,xhr, term) {      
@@ -72,7 +82,7 @@
         var fetchPage = function (page, term) {
           operation.param("page", page);
           operation.initCallbacks();
-          operation.done(function(data, status,xhr) { console.log("fetch done"); successCB(data,status, xhr, term) }).fail(function (xhr, status) { errorCB(xhr, status, term);}).execute();
+          operation.done(function(data, status,xhr) { successCB(data,status, xhr, term) }).fail(function (xhr, status) { errorCB(xhr, status, term);}).execute();
         }
 
         fetchPage(0, term);

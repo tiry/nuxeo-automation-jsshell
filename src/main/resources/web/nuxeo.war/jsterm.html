@@ -11,6 +11,7 @@ var nxContextPath = "/nuxeo";
      <script type="text/javascript" src="/nuxeo/scripts/automation.js"></script>
      <script type="text/javascript" src="/nuxeo/scripts/jquery.terminal-0.6.3.js"></script>
      <script type="text/javascript" src="/nuxeo/scripts/nxshell.js"></script>
+     <script type="text/javascript" src="/nuxeo/scripts/nxshell-builtins.js"></script>
 </head>
 
 <body>
@@ -20,7 +21,7 @@ var nxContextPath = "/nuxeo";
 <script>
 
   jQuery(document).ready(function() {
-     jQuery('#nxterm').nxShell();
+     nuxeo.shell('#nxterm');
    });
 
 </script>

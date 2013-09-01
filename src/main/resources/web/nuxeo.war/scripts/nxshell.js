@@ -85,15 +85,24 @@ function getBuiltIns() {
 function nxshell() {
 
   this.automationDefs= [];
+  this.builtins = [];
+  this.ctx = { path : "/" };
 
   var me = this;
+  var shell = this;
 
-  this.builtins = [ {id : 'ls', impl : function (cmds, term) {return getBuiltIns().lsCmd(cmds, term, me);}},
-                    {id : 'pwd', impl : function (cmds, term) {return getBuiltIns().pwdCmd(cmds, term, me);}},
-                    {id : 'cd', impl : function (cmds, term) {return getBuiltIns().cdCmd(cmds, term, me);}},
-                   ];
+  var initBuiltIns = function() {
+    var builtInsDefs = getBuiltIns();
+    for (var key in builtInsDefs ) {
+      var name = key;
+      if (name.indexOf("Cmd")>0){
+        name = name.substring(0,name.indexOf("Cmd"));
+      }
+      var builtin = function(k) { return function(cmds, term) { return builtInsDefs[k](cmds, term, shell)}}(key);
 
-  this.ctx = { path : "/" };
+      shell.builtins.push({ id : name, impl : builtin});
+    }
+  }
 
   nxshell.prototype.getAutomationDefs = function () {
       return this.automationDefs;
@@ -264,8 +273,13 @@ function nxshell() {
       }
     }
 
+    // **************************
     // init shell object
+    // 1 - init BuiltIns
+    initBuiltIns();
+    // 2 - fetch Operation definitions
     this.fetchAutomationDefs();
+    // 3 - fetch Root Document to init context
     nuxeo.operation('Document.Fetch' , { automationParams : {params : { value : "/"}}})
               .done(function(data, status,xhr) {
                 me.ctx.path = data.path;
@@ -275,6 +289,7 @@ function nxshell() {
                 console.log("Error " + status);
               })
               .execute();
+    
 
 }
 

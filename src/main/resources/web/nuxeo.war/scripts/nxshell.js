@@ -46,30 +46,36 @@ function nxshell() {
         params: {
           query: "select * from Document where ecm:parentId = ? AND ecm:isCheckedInVersion= 0",
           queryParams: target ,
-          pageSize: 5,
-          page: 1
+          pageSize: 10,
+          page: 0
        }
      }
     });
 
     var doDisplayPage = function(docs, term) {
-       console.log(docs);
-       console.log(docs.entries.length);
+       term.echo("  [ display page : " + (docs.pageIndex+1) + "/" + docs.pageCount + "]");
        for (var i =0 ; i < docs.entries.length; i++) {
          term.echo(docs.entries[i].uid);
        }
-       term.echo("##### display page : " + docs.pageIndex + "/" + docs.pageCount);
-
        var me = this;
-       var idx = docs.pageIndex;
+       var idx = docs.pageIndex;  
        var prevIdx = idx-1;
        var nextIdx = idx+1;
        if (prevIdx < 0) { prevIdx = 0};
-       if (nextIdx > docs.pageCount) { nextIdx = idx};
-       displayPage(term, function() { fetchPage(prevIdx, term)}, function() { fetchPage(nextIdx, term)})
+       if (nextIdx > (docs.pageCount-1)) {          
+          term.echo("  ( end of listing ) ");
+          if (prevIdx>0) {
+            displayPage(term, function() { fetchPage(prevIdx, term)}, 
+                              function() { term.echo("finito!!!");}
+                        )
+          }
+       } else {
+         term.echo("  ( use arrows to navigate between pages ) ");
+         displayPage(term, function() { console.log("fetch " + prevIdx);  fetchPage(prevIdx, term)}, function() { console.log("fetch " + nextIdx);  fetchPage(nextIdx, term)})
+       }
     }
 
-    function successCB(data, status,xhr, term) {
+    function successCB(data, status,xhr, term) {      
       doDisplayPage(data, term);
     };
 
@@ -79,14 +85,15 @@ function nxshell() {
 
     var fetchPage = function (page, term) {
       operation.param("page", page);
-      operation.done(successCB).fail(errorCB).execute();
+      operation.initCallbacks();
+      operation.done(function(data, status,xhr) { console.log("fetch done"); successCB(data,status, xhr, term) }).fail(function (xhr, status) { errorCB(xhr, status, term);}).execute();
     }
 
-    fetchPage(1, term);
+    fetchPage(0, term);
   }
 
   var displayPage = function (term, prevPageCB, nextPageCB) {
-    term.push(jQuery.noop, {
+    term.push(jQuery.noop, {      
       keydown: function(e) {
         if (e.which === 38 ) { //up
           prevPageCB();

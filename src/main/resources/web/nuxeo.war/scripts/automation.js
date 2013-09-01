@@ -342,6 +342,11 @@
         return this
       },
 
+      initCallbacks: function () {
+        failCallbacks=[];
+        doneCallbacks=[];
+      },
+
       execute: function(params) {
         params = params || {}
         var done = params.done ? params.done : [],

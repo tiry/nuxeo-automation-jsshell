@@ -419,7 +419,9 @@
    nuxeo.DEFAULT_NXSHELL = {
        prompt: 'nx> ',
        name: 'nxshell',
-       tabcompletion : true
+       tabcompletion : true,
+       width: '800px',
+       height: '600px'
    }
 
    nuxeo.shell = function(filter, opts) {
@@ -428,7 +430,17 @@
        opts.greetings = function() { return nx.nxGreetings()};
        opts.completion =  function (term,input,callback)  { return nx.completion(term,input,callback)};
        opts.onInit = function(term) { return nx.init(term)};
-       jQuery(filter).terminal(function (cmd, term) 
+       var htmlOb;
+       if (filter) {
+        htmlOb = jQuery(filter);
+       } else {      
+        htmlOb = jQuery("<div><div>");
+        htmlOb.css("width", opts.width);
+        htmlOb.css("height", opts.height);
+        htmlOb.addClass("terminal");
+        jQuery("body").append(htmlOb);
+       }
+       htmlOb.terminal(function (cmd, term) 
                     { 
                       return nx.nxTermHandler(cmd, term)
                     }, opts);

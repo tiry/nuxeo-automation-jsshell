@@ -1,4 +1,6 @@
 
+/** contribute shell built-ins commands **/
+
 (function(jQuery,nuxeo) {
   var cmds = {
       cd : {
@@ -17,7 +19,7 @@
               .fail(function(xhr,status) {
                 term.echo("Error " + status);
               })
-              .execute()
+              .execute();
           }
         },
         help : "Change current remote directory",
@@ -34,17 +36,25 @@
         },
         help : "Return current remote directory",
         suggest : []
-      },                  
+      },
+
+      hide  : {
+          impl : function (cmds, term, shell) {
+            shell.hide();
+          },
+          help : "Hides current terminal",
+          suggest : []
+      },
 
       view  : {
         impl : function (cmds, term, shell) {
           var doc = shell.ctx.doc;
           if (cmds.length>1) {
             if(typeof(cmds[1])=='string') {
-              var targetPath = shell.resolvePath(cmds[1]);  
+              var targetPath = shell.resolvePath(cmds[1]);
               var viewCmd = this.impl;
               nuxeo.operation('Document.Fetch' , { documentSchemas : "*", automationParams : {params : { value : targetPath}}})
-                .done(function(data, status,xhr) {                  
+                .done(function(data, status,xhr) {
                   viewCmd(["view", data], term, shell);
                 })
                 .fail(function(xhr,status) {
@@ -53,18 +63,18 @@
                 .execute();
                 return;
             } else {
-              doc = cmds[1]; 
+              doc = cmds[1];
             }
           }
-          if (doc) {            
+          if (doc) {
             term.echo("[[i;#DDDDFF;#0] uid   ] : " + doc.uid);
             term.echo("[[i;#DDDDFF;#0] title ] : " + doc.title);
             term.echo("[[i;#DDDDFF;#0] path  ] : " + doc.path);
             term.echo("[[i;#DDDDFF;#0] type  ] : " + doc.type);
             term.echo("[[i;#DDDDFF;#0] state ] : " + doc.state);
-            term.echo("[[i;#DDDDFF;#0] properties ] : ");            
+            term.echo("[[i;#DDDDFF;#0] properties ] : ");
             var props = [];
-            for (var propName in doc.properties) {               
+            for (var propName in doc.properties) {
                var propNameLen = propName.length;
                if (propNameLen > 25) {
                   propNameLen = 25;
@@ -74,17 +84,17 @@
                if (typeof(propValue)=='object') {
                   propValue = JSON.stringify(propValue, null, "\t");
                }
-               props.push("[[i;#DDDDFF;#0]    " + pad + propName + "] : " + propValue);     
+               props.push("[[i;#DDDDFF;#0]    " + pad + propName + "] : " + propValue);
             }
             props.sort();
-            shell.displayPages(term, props, 20, 0);  
+            shell.displayPages(term, props, 20, 0);
           } else {
 
           }
         },
         help : "view a Document",
         suggest : ['path']
-      },                  
+      },
 
       ls : {
         impl : function (cmds, term, shell) {
@@ -123,18 +133,18 @@
         var doDisplayPage = function(docs, term) {
            for (var i =0 ; i < docs.entries.length; i++) {
              term.echo(shell.printDoc(docs.entries[i], shell.ctx.doc.path));
-           }           
+           }
            if (docs.pageCount==1) {
             return;
            }
-           var idx = docs.pageIndex;  
+           var idx = docs.pageIndex;
            var prevIdx = idx-1;
            var nextIdx = idx+1;
 
            var prevCB = function() { fetchPage(prevIdx, term)};
            var nextCB = function() { fetchPage(nextIdx, term)};
 
-           if (prevIdx < 0) { 
+           if (prevIdx < 0) {
             prevCB = function(){};
            };
            if (nextIdx > (docs.pageCount-1)) {
@@ -146,12 +156,12 @@
               term.set_prompt(shell.opts.prompt);
             };
            }
-           term.echo("  [ display page : " + (docs.pageIndex+1) + "/" + docs.pageCount + "]");           
+           term.echo("  [ display page : " + (docs.pageIndex+1) + "/" + docs.pageCount + "]");
 
            shell.displayNavigationPrompt(term,prevCB,nextCB);
         }
 
-        function successCB(data, status,xhr, term) {      
+        function successCB(data, status,xhr, term) {
           doDisplayPage(data, term);
         };
 

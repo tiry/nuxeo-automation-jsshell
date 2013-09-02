@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+
+<component name="org.nuxeo.theme.automation.html.override">
+
+  <require>org.nuxeo.theme.html</require>
+  <require>org.nuxeo.theme.nuxeo.default</require>
+
+  <extension target="org.nuxeo.theme.services.ThemeService" point="views">
+    <view name="nuxeo5 includes" template-engine="jsf-facelets" merge="true">
+      <format-type>widget</format-type>
+      <resource>nuxeo-automation.js</resource>
+      <resource>jquery.terminal.css</resource>
+      <resource>jquery.terminal.js</resource>
+      <resource>nxshell.js</resource>
+      <resource>nxshell-builtins.js</resource>
+    </view>
+  </extension>
+
+  <extension target="org.nuxeo.theme.services.ThemeService"
+    point="resources">
+    <resource name="jquery.terminal.css">
+      <path>css/jquery.terminal.css</path>
+    </resource>
+    <resource name="jquery.terminal.js">
+      <path>scripts/shell/jquery.terminal-0.6.3.js</path>
+      <require>jquery.js</require>
+    </resource>
+    <resource name="nuxeo-automation.js">
+      <path>scripts/nuxeo-automation.js</path>
+      <require>jquery.js</require>
+    </resource>
+    <resource name="nxshell.js">
+      <path>scripts/shell/nxshell.js</path>
+      <require>jquery.terminal.js</require>
+      <require>nuxeo-automation.js</require>
+    </resource>
+    <resource name="nxshell-builtins.js">
+      <path>scripts/shell/nxshell-builtins.js</path>
+      <require>nxshell.js</require>
+    </resource>
+  </extension>
+
+</component>

@@ -1413,6 +1413,7 @@
                         if (line[j] === '&') { // treat entity as one character
                             var m = line.substring(j).match(/^(&[^;]+;)/);
                             if (!m) {
+                                console.log("faulty line",line);
                                 throw "Unclosed html entity at char " + j;
                             }
                             j+=m[1].length-2; // because contine add 1 to j

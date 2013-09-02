@@ -1,4 +1,6 @@
 
+/** Nuxeo Shell in JS **/
+
 (function(jQuery,nuxeo) {
 
     if (nuxeo.shell_builtins === undefined) {
@@ -11,7 +13,7 @@
       this.builtins = [];
       this.ctx = { path : "/" };
       this.opts = opts;
-      
+
       var me = this;
       var shell = this;
 
@@ -39,7 +41,7 @@
 
       nxshell.prototype.displayNavigationPrompt = function (term, prevPageCB, nextPageCB) {
         term.set_prompt("( use arrows to navigate between pages - q to quit )");
-        term.push(jQuery.noop, {      
+        term.push(jQuery.noop, {
           keydown: function(e) {
             if (e.which === 38 ) { //up
               prevPageCB();
@@ -78,7 +80,7 @@
           nextCB = function() {
               term.pop();
               term.pop();
-              term.set_prompt(opts.prompt);            
+              term.set_prompt(opts.prompt);
           }
         }
         if (offset-pageSize< 0) {
@@ -87,7 +89,7 @@
 
         me.displayNavigationPrompt(term, prevCB, nextCB);
       }
-      
+
       nxshell.prototype.resolvePath = function (path) {
         if (path.indexOf("/")==0) {
           return path;
@@ -118,7 +120,7 @@
           head+=" |  \\| |_   ___  _____  ___| (___ | |__   ___| | | \n";
           head+=" | . ` | | | \\ \\/ / _ \\/ _ \\\\___ \\| '_ \\ / _ \\ | | \n";
           head+=" | |\\  | |_| |>  <  __/ (_) |___) | | | |  __/ | | \n";
-          head+=" |_| \\_|\\__,_/_/\\_\\___|\\___/_____/|_| |_|\\___|_|_| \n\n\n";
+          head+=" |_| \\_|\\__,_/_/\\_\\___|\\___/_____/|_| |_|\\___|_|_| \n";
           return head;
       }
 
@@ -158,7 +160,7 @@
           if (cmdOp) {
             term.echo(cmdOp.help);
           } else {
-           var op = this.findOperation(cmd); 
+           var op = this.findOperation(cmd);
            if (op) {
             term.echo(op.label);
             term.echo(op.description);
@@ -224,7 +226,7 @@
           title = "";
         }
         var path = doc.path;
-        if (relPath && path.indexOf(relPath)==0) {          
+        if (relPath && path.indexOf(relPath)==0) {
           path = path.substring(relPath.length);
           if (path.indexOf("/")==0) {
             path = path.substring(1);
@@ -267,7 +269,7 @@
         }
         return null;
       }
-      
+
       var suggesters = {
         path : function(term, totalInput, value, callback ) {
           var suggestions = [];
@@ -306,13 +308,13 @@
                   return;
                }
                for (var i =0 ; i < docs.entries.length; i++) {
-                if (value.indexOf("/")!=0) {                  
-                  suggestions.push(docs.entries[i].path.substring(shell.ctx.path.length));                  
+                if (value.indexOf("/")!=0) {
+                  suggestions.push(docs.entries[i].path.substring(shell.ctx.path.length));
                 } else {
-                  suggestions.push(docs.entries[i].path);                  
-                }                
-               }     
-               callback(suggestions);                  
+                  suggestions.push(docs.entries[i].path);
+                }
+               }
+               callback(suggestions);
               })
           .fail(function (xhr, status) { console.log("Error", status);})
           .execute();
@@ -320,7 +322,7 @@
       }
 
       nxshell.prototype.cmdParamCompletion = function (term,cmd,input,callback) {
-        
+
         if (cmd.suggest.length>0) {
           var args = input.split(" ");
           args.shift();
@@ -330,7 +332,7 @@
             value = args[idx]
           } else {
             idx=0;
-          }          
+          }
           if(cmd.suggest.length > idx) {
             var suggesterName = cmd.suggest[idx];
             suggesters[suggesterName](term,input, value,callback);
@@ -386,7 +388,7 @@
                 if (suggestions.length > 5) {
                   break;
                 }
-              }              
+              }
 
               callback(suggestions);
             }
@@ -398,13 +400,29 @@
           // init shell object
           // 1 - init BuiltIns
           initBuiltIns();
+          console.log("built-ins ready");
           // 2 - fetch Operation definitions
           this.fetchAutomationDefs();
+          console.log("Automation definition ready");
           // 3 - fetch Root Document to init context
-          nuxeo.operation('Document.Fetch' , { automationParams : {params : { value : "/"}}})
+          var root = opts.root;
+          if(!root) {
+            if (window.ctx) {
+              root = window.ctx.currentDocument;
+            }
+          }
+          if (!root) {
+            root = "/";
+          }
+          /*if (!root.indexOf("/")==0) {
+            root = "id:" + root;
+          }*/
+          console.log("init root on " + root);
+          nuxeo.operation('Document.Fetch' , { automationParams : {params : { value : root}}})
                     .done(function(data, status,xhr) {
+                      console.log("init root done");
                       me.ctx.path = data.path;
-                      me.ctx.doc = data;                
+                      me.ctx.doc = data;
                       term.echo("Connected on repository '" + data.repository + "'");
                       term.echo(" current path is " + data.path + "(" + data.uid + ")");
                     })
@@ -413,7 +431,7 @@
                     })
                     .execute();
         }
-        
+
     };
 
    nuxeo.DEFAULT_NXSHELL = {
@@ -421,7 +439,7 @@
        name: 'nxshell',
        tabcompletion : true,
        width: '800px',
-       height: '600px'
+       height: '300px',
    }
 
    nuxeo.shell = function(filter, opts) {
@@ -430,21 +448,44 @@
        opts.greetings = function() { return nx.nxGreetings()};
        opts.completion =  function (term,input,callback)  { return nx.completion(term,input,callback)};
        opts.onInit = function(term) { return nx.init(term)};
-       var htmlOb;
+       var htmlOb = nuxeo.shell_instance;
+       if (htmlOb) {
+       if (htmlOb.css("display")=='block') {
+         htmlOb.hide('slow');
+       } else {
+         htmlOb.show('slow');
+       }
+         return;
+       }
        if (filter) {
         htmlOb = jQuery(filter);
-       } else {      
+        htmlOb.terminal(function (cmd, term)
+                {
+                  return nx.nxTermHandler(cmd, term)
+                }, opts);
+       } else {
+        // auto-build UI
         htmlOb = jQuery("<div><div>");
         htmlOb.css("width", opts.width);
         htmlOb.css("height", opts.height);
         htmlOb.addClass("terminal");
-        jQuery("body").append(htmlOb);
-       }
-       htmlOb.terminal(function (cmd, term) 
-                    { 
+        htmlOb.css("display","none");
+        htmlOb.css("border-style","solid");
+        htmlOb.css("border-width","1px");
+        htmlOb.css("border-color","#AAAAAA");
+        jQuery("body").prepend(htmlOb);
+        htmlOb.show('slow','swing', function() {
+            htmlOb.terminal(function (cmd, term)
+                    {
                       return nx.nxTermHandler(cmd, term)
                     }, opts);
+        });
+       }
+       // setup hide callback
+       nuxeo.shell_instance = htmlOb;
+       nx.hide = function() {htmlOb.hide('slow')};
+
        };
-  
-})(jQuery,this.nuxeo === undefined ? this.nuxeo = {} : this.nuxeo)
+
+})(jQuery,this.nuxeo === undefined ? this.nuxeo = {} : this.nuxeo);
 

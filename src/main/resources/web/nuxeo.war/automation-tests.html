@@ -7,11 +7,11 @@
 <body>
   <div id="mocha"></div>
   <script type="text/javascript" src="/nuxeo/nxthemes-lib/jquery.js"></script>
-  <script type="text/javascript" src="/nuxeo/scripts/chai.js"></script>
-  <script type="text/javascript" src="/nuxeo/scripts/mocha.js"></script>
+  <script type="text/javascript" src="/nuxeo/scripts/test/chai.js"></script>
+  <script type="text/javascript" src="/nuxeo/scripts/test/mocha.js"></script>
   <script>mocha.setup('bdd')</script>
-  <script type="text/javascript" src="/nuxeo/scripts/automation.js"></script>
-  <script type="text/javascript" src="/nuxeo/scripts/automation-tests.js"></script>
+  <script type="text/javascript" src="/nuxeo/scripts/nuxeo-automation.js"></script>
+  <script type="text/javascript" src="/nuxeo/scripts/test/automation-tests.js"></script>
   <script>
     nuxeo.DEFAULT_AUTOMATION_OPTIONS.url = "/nuxeo/site/automation"
     mocha.checkLeaks();

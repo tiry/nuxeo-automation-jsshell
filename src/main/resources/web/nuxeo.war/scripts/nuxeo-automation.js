@@ -489,4 +489,4 @@
     return operation(operationId, opts)
   }
 
-})(this.nuxeo === undefined ? this.nuxeo = {} : this.nuxeo)
+})(this.nuxeo === undefined ? this.nuxeo = {} : this.nuxeo);

@@ -73,6 +73,7 @@
           term.echo(" ... end of listing ... ");
           nextCB = function() {
               term.pop();
+              term.pop();
               term.set_prompt(opts.prompt);            
           }
         }
@@ -190,12 +191,19 @@
            }
       }
 
-      nxshell.prototype.printDoc = function (doc) {
+      nxshell.prototype.printDoc = function (doc, relPath) {
         var title = doc.title;
         if (!title) {
           title = "";
         }
-        return "[" + doc.uid + "] " + doc.path + "'" + title + "' " + doc.path + " (" + doc.type + ")";
+        var path = doc.path;
+        if (relPath && path.indexOf(relPath)==0) {          
+          path = path.substring(relPath.length);
+          if (path.indexOf("/")==0) {
+            path = path.substring(1);
+          }
+        }
+        return "  [[bi;#0000FF;#0] {doc} ] " + path  + " '" + title + "' " + " (" + doc.type + ") [[i;#666666;#0] " + doc.uid + " ]" ;
       }
 
       nxshell.prototype.prettyPrint = function (ob) {
@@ -266,7 +274,6 @@
           });
 
           operation.done(function(docs, status,xhr) {
-               console.log("returned !")
                if (docs.entries.length > 9) {
                   term.echo("... too much results to complete ...");
                   return;

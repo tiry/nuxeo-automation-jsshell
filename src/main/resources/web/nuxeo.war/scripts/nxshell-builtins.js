@@ -40,6 +40,7 @@
         impl : function (cmds, term, shell) {
         var target = shell.ctx.doc.uid;
         // XXX manage path ref !
+        term.echo("listing children for " + shell.ctx.path);
         var operation = nuxeo.operation('Document.PageProvider' , {
           automationParams: {
             params: {
@@ -52,8 +53,11 @@
         });
         var doDisplayPage = function(docs, term) {
            for (var i =0 ; i < docs.entries.length; i++) {
-             term.echo(shell.printDoc(docs.entries[i]));
+             term.echo(shell.printDoc(docs.entries[i], shell.ctx.doc.path));
            }           
+           if (docs.pageCount==1) {
+            return;
+           }
            var idx = docs.pageIndex;  
            var prevIdx = idx-1;
            var nextIdx = idx+1;
@@ -74,6 +78,7 @@
             };
            }
            term.echo("  [ display page : " + (docs.pageIndex+1) + "/" + docs.pageCount + "]");           
+
            shell.displayNavigationPrompt(term,prevCB,nextCB);
         }
 

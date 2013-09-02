@@ -19,16 +19,17 @@
         var builtInsDefs = nuxeo.shell_builtins;
         for (var key in builtInsDefs ) {
           var name = key;
+
           if (name.indexOf("Cmd")>0){
             name = name.substring(0,name.indexOf("Cmd"));
           }
           if (name.indexOf("Help")>0){
             continue;
           }
-          var builtin = function(k) { return function(cmds, term) { return builtInsDefs[k](cmds, term, shell)}}(key);
-          var helpStr =  builtInsDefs[name + "Help"];
-
-          shell.builtins.push({ id : name, impl : builtin, help : helpStr});
+          var builtin = function(k) { return function(cmds, term) { return builtInsDefs[k].impl(cmds, term, shell)}}(key);
+          var helpStr =  builtInsDefs[key].help;
+          var suggestLst =  builtInsDefs[key].suggest;
+          shell.builtins.push({ id : name, impl : builtin, help : helpStr, suggest : suggestLst});
         }
       }
 
@@ -80,9 +81,7 @@
         }
 
         me.displayNavigationPrompt(term, prevCB, nextCB);
-
       }
-
 
       nxshell.prototype.nxGreetings = function () {
           var head = "";
@@ -233,13 +232,84 @@
         }
         return null;
       }
+      
+      var suggesters = {
+        path : function(term, totalInput, value, callback ) {
+          var suggestions = [];
+
+          var absolutePath = value;
+          if (value.indexOf("/")!=0){
+            absolutePath  = shell.ctx.path;
+            if (absolutePath[absolutePath.length-1]!="/") {
+              absolutePath = absolutePath + "/";
+            }
+            absolutePath = absolutePath + value;
+          }
+
+          var parentPath = absolutePath.substring(0, absolutePath.lastIndexOf("/")+1);
+          var name = absolutePath.substring(absolutePath.lastIndexOf("/")+1);
+
+          var query = "select * from Document where ecm:path STARTSWITH '" + parentPath + "' AND ecm:isCheckedInVersion= 0";
+          if (name.length>0) {
+            query = query + " AND ecm:name LIKE '" + name + "%' ";
+          }
+          query = query + " order by ecm:path ";
+
+          var operation = nuxeo.operation('Document.PageProvider' , {
+            automationParams: {
+              params: {
+                query: query,
+                pageSize: 10,
+                page: 0
+             }
+           }
+          });
+
+          operation.done(function(docs, status,xhr) {
+               console.log("returned !")
+               if (docs.entries.length > 9) {
+                  term.echo("... too much results to complete ...");
+                  return;
+               }
+               for (var i =0 ; i < docs.entries.length; i++) {
+                if (value.indexOf("/")!=0) {                  
+                  suggestions.push(docs.entries[i].path.substring(shell.ctx.path.length));                  
+                } else {
+                  suggestions.push(docs.entries[i].path);                  
+                }                
+               }     
+               callback(suggestions);                  
+              })
+          .fail(function (xhr, status) { console.log("Error", status);})
+          .execute();
+        }
+      }
+
+      nxshell.prototype.cmdParamCompletion = function (term,cmd,input,callback) {
+        
+        if (cmd.suggest.length>0) {
+          var args = input.split(" ");
+          args.shift();
+          var idx = args.length-1;
+          var value = "";
+          if (idx>=0) {
+            value = args[idx]
+          } else {
+            idx=0;
+          }          
+          if(cmd.suggest.length > idx) {
+            var suggesterName = cmd.suggest[idx];
+            suggesters[suggesterName](term,input, value,callback);
+          }
+        }
+      }
 
       nxshell.prototype.completion = function (term,input,callback) {
           var existingInput = term.get_command().trim();
           var suggestions = [];
           var cmd = this.findBuiltin(existingInput.split(" ")[0]);
           if (cmd) {
-            // XXX
+            this.cmdParamCompletion(term, cmd, existingInput, callback);
           } else {
             var op = this.findOperation(existingInput.split(" ")[0]);
             if (op) {

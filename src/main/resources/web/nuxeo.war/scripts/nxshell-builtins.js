@@ -1,7 +1,8 @@
 
 (function(jQuery,nuxeo) {
   var cmds = {
-      cdCmd : function (cmds, term, shell) {
+      cd : {
+        impl : function (cmds, term, shell) {
           if (cmds.length>1) {
             var target = cmds[1];
             if (target.indexOf("/")!=0) {
@@ -19,21 +20,24 @@
               .execute()
           }
         },
-      cdHelp : "Change current remote directory",
-
-      pwdCmd  : function (cmds, term, shell) {
-        if (shell.ctx.doc) {
-          term.echo(" current Document is " + shell.prettyPrint(shell.ctx.doc));
-        } else {
-          term.echo(" current Path is " + shell.ctx.path);
-        }
+        help : "Change current remote directory",
+        suggest : ['path']
       },
-      
-      pwdHelp : "Return current remote directory",
-      
-      lsHelp : "lists children in current directory",
 
-      lsCmd : function (cmds, term, shell) {
+      pwd  : {
+        impl : function (cmds, term, shell) {
+          if (shell.ctx.doc) {
+            term.echo(" current Document is " + shell.prettyPrint(shell.ctx.doc));
+          } else {
+            term.echo(" current Path is " + shell.ctx.path);
+          }
+        },
+        help : "Return current remote directory",
+        suggest : []
+      },                  
+
+      ls : {
+        impl : function (cmds, term, shell) {
         var target = shell.ctx.doc.uid;
         // XXX manage path ref !
         var operation = nuxeo.operation('Document.PageProvider' , {
@@ -63,6 +67,8 @@
            if (nextIdx > (docs.pageCount-1)) {
             nextCB = function(){
               term.echo("... no more items to display ... exit");
+              // double nesting
+              term.pop();
               term.pop();
               term.set_prompt(shell.opts.prompt);
             };
@@ -86,8 +92,10 @@
         }
 
         fetchPage(0, term);
-      }
-
+      },
+      help : "lists children in current directory",
+      suggest : ['path']
+    }
   };
 
   if (nuxeo.shell_builtins === undefined) {

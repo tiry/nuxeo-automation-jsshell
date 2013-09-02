@@ -271,6 +271,33 @@
       }
 
       var suggesters = {
+        nxql : function(term, totalInput, value, callback ) {
+          var query = term.get_command().trim();
+          var suggestions = [];
+          if (query.indexOf("*")<0) {
+            suggestions.push("*");
+          } else {
+            if (query.indexOf(" from")<0) {
+              suggestions.push("from");
+            } else {
+              if (query.indexOf(" where ")<0) {
+                suggestions.push("Document");
+                suggestions.push("File");
+                suggestions.push("Folder");
+                suggestions.push("Workspace");
+                suggestions.push("where");
+              } else {
+                suggestions.push("and");
+                suggestions.push("or");
+                suggestions.push("ecm:uuid");
+                suggestions.push("ecm:path");
+                suggestions.push("ecm:parentId");
+                suggestions.push("ecm:isCheckedInVersion");
+              }
+            }
+          }
+          callback(suggestions);
+        },         
         path : function(term, totalInput, value, callback ) {
           var suggestions = [];
 
@@ -323,7 +350,7 @@
 
       nxshell.prototype.cmdParamCompletion = function (term,cmd,input,callback) {
 
-        if (cmd.suggest.length>0) {
+        if ( Object.prototype.toString.call(cmd.suggest) === '[object Array]' && cmd.suggest.length>0) {
           var args = input.split(" ");
           args.shift();
           var idx = args.length-1;
@@ -337,6 +364,8 @@
             var suggesterName = cmd.suggest[idx];
             suggesters[suggesterName](term,input, value,callback);
           }
+        } else if ( typeof(cmd.suggest) == 'string' && cmd.suggest.length>0) {
+          suggesters[cmd.suggest](term,input, value,callback);
         }
       }
 

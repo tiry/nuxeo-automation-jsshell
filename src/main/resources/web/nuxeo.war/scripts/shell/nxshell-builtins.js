@@ -179,7 +179,72 @@
       },
       help : "lists children in current directory",
       suggest : ['path']
+    },
+    select : {
+        impl : function (cmds, term, shell) {
+        var query = cmds.join(" ");
+        term.echo("execute " + query);
+        var operation = nuxeo.operation('Document.PageProvider' , {
+          automationParams: {
+            params: {
+              query: query,
+              pageSize: 10,
+              page: 0
+           }
+         }
+        });
+
+        var doDisplayPage = function(docs, term) {
+           for (var i =0 ; i < docs.entries.length; i++) {
+             term.echo(shell.printDoc(docs.entries[i], shell.ctx.doc.path));
+           }
+           if (docs.pageCount==1) {
+            return;
+           }
+           var idx = docs.pageIndex;
+           var prevIdx = idx-1;
+           var nextIdx = idx+1;
+
+           var prevCB = function() { fetchPage(prevIdx, term)};
+           var nextCB = function() { fetchPage(nextIdx, term)};
+
+           if (prevIdx < 0) {
+            prevCB = function(){};
+           };
+           if (nextIdx > (docs.pageCount-1)) {
+            nextCB = function(){
+              term.echo("... no more items to display ... exit");
+              // double nesting
+              term.pop();
+              term.pop();
+              term.set_prompt(shell.opts.prompt);
+            };
+           }
+           term.echo("  [ display page : " + (docs.pageIndex+1) + "/" + docs.pageCount + "]");
+
+           shell.displayNavigationPrompt(term,prevCB,nextCB);
+        }
+
+        function successCB(data, status,xhr, term) {
+          doDisplayPage(data, term);
+        };
+
+        function errorCB(xhr,status, term) {
+          term.echo("Error " + status);
+        };
+
+        var fetchPage = function (page, term) {
+          operation.param("page", page);
+          operation.initCallbacks();
+          operation.done(function(data, status,xhr) { successCB(data,status, xhr, term) }).fail(function (xhr, status) { errorCB(xhr, status, term);}).execute();
+        }
+
+        fetchPage(0, term);
+      },
+      help : "use nxql to search for Document",
+      suggest : "nxql"
     }
+
   };
 
   if (nuxeo.shell_builtins === undefined) {

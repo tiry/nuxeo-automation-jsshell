@@ -49,6 +49,8 @@
                prevPageCB();
             } else if (e.which === 33) { // page down
                nextPageCB();
+            } else if (e.which === 13) { // return
+               nextPageCB();
             } else if (e.which == 81) { //Q
               term.pop();
               term.set_prompt(opts.prompt);
@@ -62,7 +64,9 @@
         for (var idx = offset; (idx < list.length) && (idx < offset + pageSize) ; idx++) {
           term.echo(list[idx]);
         }
-
+        if (list.length <= pageSize) {
+          return;
+        }
         var nextCB = function() {
           me.displayPages(term, list, pageSize, offset+pageSize);
         }
@@ -82,6 +86,29 @@
         }
 
         me.displayNavigationPrompt(term, prevCB, nextCB);
+      }
+      
+      nxshell.prototype.resolvePath = function (path) {
+        if (path.indexOf("/")==0) {
+          return path;
+        }
+        var parentPath = this.ctx.path;
+        if (this.ctx.doc) {
+          if (this.ctx.doc.path) {
+            parentPath = this.ctx.doc.path;
+          }
+        }
+        var parents = parentPath.split("/");
+        var children = path.split("/");
+        for (var idx = 0; idx < children.length; idx++) {
+          var segment = children[idx];
+          if (segment=="..") {
+            parents.pop();
+          } else {
+            parents.push(segment);
+          }
+        }
+        return parents.join("/");
       }
 
       nxshell.prototype.nxGreetings = function () {
@@ -316,7 +343,7 @@
           var suggestions = [];
           var cmd = this.findBuiltin(existingInput.split(" ")[0]);
           if (cmd) {
-            this.cmdParamCompletion(term, cmd, existingInput, callback);
+            shell.cmdParamCompletion(term, cmd, existingInput, callback);
           } else {
             var op = this.findOperation(existingInput.split(" ")[0]);
             if (op) {

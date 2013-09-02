@@ -36,21 +36,90 @@
         suggest : []
       },                  
 
+      view  : {
+        impl : function (cmds, term, shell) {
+          var doc = shell.ctx.doc;
+          if (cmds.length>1) {
+            if(typeof(cmds[1])=='string') {
+              var targetPath = shell.resolvePath(cmds[1]);  
+              var viewCmd = this.impl;
+              nuxeo.operation('Document.Fetch' , { documentSchemas : "*", automationParams : {params : { value : targetPath}}})
+                .done(function(data, status,xhr) {                  
+                  viewCmd(["view", data], term, shell);
+                })
+                .fail(function(xhr,status) {
+                  term.echo("Error " + status);
+                })
+                .execute();
+                return;
+            } else {
+              doc = cmds[1]; 
+            }
+          }
+          if (doc) {            
+            term.echo("[[i;#DDDDFF;#0] uid   ] : " + doc.uid);
+            term.echo("[[i;#DDDDFF;#0] title ] : " + doc.title);
+            term.echo("[[i;#DDDDFF;#0] path  ] : " + doc.path);
+            term.echo("[[i;#DDDDFF;#0] type  ] : " + doc.type);
+            term.echo("[[i;#DDDDFF;#0] state ] : " + doc.state);
+            term.echo("[[i;#DDDDFF;#0] properties ] : ");            
+            var props = [];
+            for (var propName in doc.properties) {               
+               var propNameLen = propName.length;
+               if (propNameLen > 25) {
+                  propNameLen = 25;
+               }
+               var pad = new Array(26-propNameLen).join(' ');
+               var propValue = doc.properties[propName];
+               if (typeof(propValue)=='object') {
+                  propValue = JSON.stringify(propValue, null, "\t");
+               }
+               props.push("[[i;#DDDDFF;#0]    " + pad + propName + "] : " + propValue);     
+            }
+            props.sort();
+            shell.displayPages(term, props, 20, 0);  
+          } else {
+
+          }
+        },
+        help : "view a Document",
+        suggest : ['path']
+      },                  
+
       ls : {
         impl : function (cmds, term, shell) {
+        console.log("ls =>", this);
         var target = shell.ctx.doc.uid;
-        // XXX manage path ref !
-        term.echo("listing children for " + shell.ctx.path);
+        if (cmds.length>1) {
+          if (cmds[1].indexOf("uid:")==0) {
+            target = cmds[1].substring(4);
+          } else {
+            target = shell.resolvePath(cmds[1]);
+            var lsCmd = this.impl;
+            term.echo(" [[i;#BBBBBB;#0]fetching document at path " + target + "]");
+            nuxeo.operation('Document.Fetch' , { automationParams : {params : { value : target}}})
+              .done(function(data, status,xhr) {
+                lsCmd(["ls", "uid:" + data.uid], term, shell);
+              })
+              .fail(function(xhr,status) {
+                term.echo("Error " + status);
+              })
+              .execute();
+            return;
+          }
+        };
+        var query = "select * from Document where ecm:parentId = '" + target + "' AND ecm:isCheckedInVersion= 0";
+        term.echo("listing children for " + target);
         var operation = nuxeo.operation('Document.PageProvider' , {
           automationParams: {
             params: {
-              query: "select * from Document where ecm:parentId = ? AND ecm:isCheckedInVersion= 0",
-              queryParams: target ,
+              query: query,
               pageSize: 10,
               page: 0
            }
          }
         });
+
         var doDisplayPage = function(docs, term) {
            for (var i =0 ; i < docs.entries.length; i++) {
              term.echo(shell.printDoc(docs.entries[i], shell.ctx.doc.path));

@@ -4,6 +4,37 @@
     log = function() {};
   }
 
+  // ************************************
+  // Uploader
+
+  nuxeo.DEFAULT_AUTOMATION_UPLOADER_OPTIONS = {
+        numConcurrentUploads: 5,
+        // define if upload should be triggered directly
+        directUpload: true,
+        // update upload speed every second
+        uploadRateRefreshTime : 1000,
+        handler: {
+          // invoked when a new batch is started
+          batchStarted : function() {
+          },
+          // invoked when the upload for given file has been started
+          uploadStarted : function(fileIndex, file) {
+          },
+          // invoked when the upload for given file has been finished
+          uploadFinished : function(fileIndex, file, time) {
+          },
+          // invoked when the progress for given file has changed
+          fileUploadProgressUpdated : function(fileIndex, file, newProgress) {
+          },
+          // invoked when the upload speed of given file has changed
+          fileUploadSpeedUpdated : function(fileIndex, file, KBperSecond) {
+          },
+          // invoked when all files have been uploaded
+          batchFinished : function(batchId) {
+          }
+        }
+      }
+
   function uploader(operationId, options) {
     var sendingRequestsInProgress = false,
       uploadStack = [],
@@ -264,6 +295,188 @@
       return uploader
   }
 
+  // ************************************
+  // REST binding
+
+  nuxeo.DEFAULT_REST_OPTIONS = {
+          url: "/nuxeo/site/api",
+          execTimeout: 30000,
+    }
+
+  function location(repo, docRef) {
+    var docLoc = {};
+    if (repo) {
+      docLoc.repo = repo;
+    }
+    if (docRef) {
+      docLoc.docRef = docRef;
+    }
+
+    if (!docLoc.docRef) {
+      docLoc.document = docLoc.doc = function(docRef) { return location(docLoc.repo, docRef)};
+    }
+    if (!docLoc.repo) {
+      docLoc.repository = docLoc.repo = function(repo) { return location(repo, docLoc.docRef)};
+    }
+
+    function encodeDocRef(url, docRef) {
+        if (docLoc.docRef.indexOf("/")==0) {
+            url = url + "/path" + docLoc.docRef;
+            if (url[url.length-1]=='/') {
+              url = url.substring(0, url.length-1);
+            }
+        } else {
+            url = url + "/id/" + docLoc.docRef;
+        }
+        return url;
+    }
+    function executeRestCall(docLoc, type, options, adapter, body) {
+        var url = options.url;
+        var done, fail, txTimeout;
+        var qsParam = {};
+
+        url = encodeDocRef(url, docLoc.docRef);
+
+        if (docLoc.adapters) {
+          url = url + "/@bo/" + docLoc.adapters[0];
+        }
+
+        for (var p in options) {
+          if (p === 'done') {
+            done = options[p];
+          } else if (p === 'fail') {
+            fail = options[p];
+          } else if (p === 'url') {
+            // skip
+          } else if (p === 'execTimeout') {
+            txTimeout = 5 + (options[p] / 1000) | 0
+          } else {
+            qsParam[p]=options[p];
+          }
+        }
+
+        if (!done) {
+          done = function(data, textStatus, jqXHR) {
+            console.log("REST call result",data);
+          }
+        }
+        if (!fail) {
+          fail = function(jqXHR, textStatus, errorThrown) {
+            console.log("REST call ERROR",errorThrown, textStatus);
+          }
+        }
+        if (adapter) {
+          url = url + "/@" + adapter;
+        }
+
+        // add QueryString params
+        if (qsParam) {
+          url = url + "?";
+          for (var p in qsParam) {
+            url = url + p + "=" + qsParam[p] + "&";
+          }
+          url = url.substring(0, url.length-1);
+        }
+        var xhrParams = {
+            url : url,
+            type: type,
+            beforeSend: function(xhr) {
+              if (repo) {
+                xhr.setRequestHeader('X-NXRepository', repo);
+              }
+              if (txTimeout) {
+                xhr.setRequestHeader('Nuxeo-Transaction-Timeout', txTimeout);
+              }
+              if (docLoc.facets && docLoc.facets.length>0) {
+                  // xhr.setRequestHeader('X-NXRepository', repo);
+              }
+            }
+        }
+        if (body) {
+          xhrParams.data = JSON.stringify(body);
+        }
+        jQuery.ajax(xhrParams).done(done).fail(fail);
+    }
+
+    docLoc.fetch = function(options) {
+      var opts = jQuery.extend({}, nuxeo.DEFAULT_REST_OPTIONS, options);
+      executeRestCall(this, 'GET', opts, undefined);
+    }
+
+    docLoc.create = function(options, body) {
+        var opts = jQuery.extend({}, nuxeo.DEFAULT_REST_OPTIONS, options);
+        executeRestCall(this, 'POST', opts, undefined, body);
+    }
+
+    docLoc.update = function(options, body) {
+        var opts = jQuery.extend({}, nuxeo.DEFAULT_REST_OPTIONS, options);
+        executeRestCall(this, 'PUT', opts, undefined, body);
+    }
+
+    docLoc.delete = function(options) {
+        var opts = jQuery.extend({}, nuxeo.DEFAULT_REST_OPTIONS, options);
+        executeRestCall(this, 'DELETE', opts, undefined);
+    }
+
+    docLoc.children = function(options) {
+        var opts = jQuery.extend({}, nuxeo.DEFAULT_REST_OPTIONS, options);
+        executeRestCall(this, 'GET', opts, "children");
+    }
+
+    docLoc.adapter = function(adapterName) {
+      if (!this.adapters) {
+         this.adapters = [];
+      }
+      this.adapters.push(adapterName);
+      return this;
+    }
+
+    docLoc.as = docLoc.adapter;
+
+    docLoc.with = function(facet) {
+        if (!this.facets) {
+          this.facets = [];
+        }
+        this.facets.push(facet);
+        return this;
+      }
+
+    docLoc.op = docLoc.operation = function (operationId, options) {
+      var opts = jQuery.extend({}, nuxeo.DEFAULT_AUTOMATION_OPTIONS, options);
+      var url = opts.url.replace("/automation", "/api");
+      url = encodeDocRef(url, this.docRef);
+      if (this.repo) {
+        opts.repository = this.repo;
+      }
+      opts.url = url + "/@op";
+      return operation(operationId, opts)
+    }
+
+    return docLoc;
+  }
+
+  nuxeo.repository = nuxeo.repo = function(repoName) {
+    return location(repoName, undefined);
+  }
+
+  nuxeo.document = nuxeo.doc = function(docRef) {
+    return location(undefined, docRef);
+  }
+
+  // ************************************
+  // RPC Binding
+
+  nuxeo.DEFAULT_AUTOMATION_OPTIONS = {
+        url: "/nuxeo/site/automation",
+        execTimeout: 30000,
+        uploadTimeout: 20 * 60 * 1000,
+        documentSchemas: "dublincore",
+        automationParams: {
+          params: {},
+          context: {}
+        }
+      }
+
   function operation(operationId, options) {
     var doneCallbacks = [],
       failCallbacks = [],
@@ -345,6 +558,7 @@
       initCallbacks: function () {
         failCallbacks=[];
         doneCallbacks=[];
+        return this;
       },
 
       execute: function(params) {
@@ -405,7 +619,7 @@
 
     var execTimeout = options.execTimeout,
       txTimeout = 5 + (execTimeout / 1000) | 0,
-      //xhrTimeout = options.uploadTimeout, ?
+      // xhrTimeout = options.uploadTimeout, ?
       documentSchemas = options.documentSchemas,
       repo = options.repo,
       username = options.username || null,
@@ -443,45 +657,6 @@
     }
     url += operationId;
     return url;
-  }
-
-  nuxeo.DEFAULT_AUTOMATION_OPTIONS = {
-    url: "/nuxeo/site/automation",
-    execTimeout: 30000,
-    uploadTimeout: 20 * 60 * 1000,
-    documentSchemas: "dublincore",
-    automationParams: {
-      params: {},
-      context: {}
-    }
-  }
-
-  nuxeo.DEFAULT_AUTOMATION_UPLOADER_OPTIONS = {
-    numConcurrentUploads: 5,
-    // define if upload should be triggered directly
-    directUpload: true,
-    // update upload speed every second
-    uploadRateRefreshTime : 1000,
-    handler: {
-      // invoked when a new batch is started
-      batchStarted : function() {
-      },
-      // invoked when the upload for given file has been started
-      uploadStarted : function(fileIndex, file) {
-      },
-      // invoked when the upload for given file has been finished
-      uploadFinished : function(fileIndex, file, time) {
-      },
-      // invoked when the progress for given file has changed
-      fileUploadProgressUpdated : function(fileIndex, file, newProgress) {
-      },
-      // invoked when the upload speed of given file has changed
-      fileUploadSpeedUpdated : function(fileIndex, file, KBperSecond) {
-      },
-      // invoked when all files have been uploaded
-      batchFinished : function(batchId) {
-      }
-    }
   }
 
   nuxeo.operation = nuxeo.op = function(operationId, options) {

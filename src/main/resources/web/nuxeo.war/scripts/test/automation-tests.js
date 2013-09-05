@@ -318,6 +318,42 @@ describe("Nuxeo automation", function() {
         .fail(failCallback).done(childrenRetrieved).execute()
     })
   })
+
+  describe("REST tests", function() {
+    var doc
+
+    it("fetch domain document", function(done) {
+      function checkDocFetcher(data) {
+        doc = data;
+        expect(doc.uid).to.exist;
+        done()
+      }
+
+      nuxeo.doc("/default-domain").fetch({done : checkDocFetcher , fail : failCallback});
+    })
+
+    it("update fetched document", function(done) {
+        function checkDocUpdated(data) {
+          doc = data;
+          expect(doc.uid).to.exist;
+          done()
+        }
+
+        doc.update({'dc:source':'automation'});
+        expect(doc.getChangeSet,"getChangeSet method should have been added to document object").to.exist;
+        expect(doc.getChangeSet(), "getChangeSet method should return a minimal doc").to.exist;
+        expect(doc.getChangeSet().properties, "getChangeSet method should return a doc with non  empty properties").to.exist;
+        expect(doc.getChangeSet().properties['dc:source'], "getChangeSet should contains an entry for dc:source").to.exist;
+        expect(doc.save, "save method should have been added to document object").to.exist;
+
+        doc.save({done : function(data) {
+           doc = data;
+        }, fail : failCallback});
+      })
+
+  })
+
+
 })
 
 

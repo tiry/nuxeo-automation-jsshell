@@ -301,6 +301,7 @@
   nuxeo.DEFAULT_REST_OPTIONS = {
           url: "/nuxeo/site/api",
           execTimeout: 30000,
+          documentSchemas: "dublincore"
     }
 
   function location(repo, docRef) {
@@ -309,7 +310,16 @@
       docLoc.repo = repo;
     }
     if (docRef) {
-      docLoc.docRef = docRef;
+      if (typeof(docRef)==='object' && docRef['entity-type']==='document') {
+        if (docRef.uid) {
+          docLoc.docRef = docRef.uid;
+        } else {
+          docLoc.docRef = docRef.path;
+        }
+        docLoc.repo = docRef.repository;
+      } else {
+        docLoc.docRef = docRef;
+      }
     }
 
     if (!docLoc.docRef) {
@@ -332,7 +342,7 @@
     }
     function executeRestCall(docLoc, type, options, adapter, body) {
         var url = options.url;
-        var done, fail, txTimeout;
+        var done, fail, txTimeout, documentSchemas;
         var qsParam = {};
 
         url = encodeDocRef(url, docLoc.docRef);
@@ -349,8 +359,11 @@
           } else if (p === 'url') {
             // skip
           } else if (p === 'execTimeout') {
-            txTimeout = 5 + (options[p] / 1000) | 0
-          } else {
+            txTimeout = 5 + (options[p] / 1000) | 0;
+          } else if (p === 'documentSchemas') {
+            documentSchemas = options[p];
+          }
+          else {
             qsParam[p]=options[p];
           }
         }
@@ -387,6 +400,10 @@
               if (txTimeout) {
                 xhr.setRequestHeader('Nuxeo-Transaction-Timeout', txTimeout);
               }
+              if (documentSchemas.length > 0) {
+                  xhr.setRequestHeader('X-NXDocumentProperties',
+                      documentSchemas);
+                }
               if (docLoc.facets && docLoc.facets.length>0) {
                   // xhr.setRequestHeader('X-NXRepository', repo);
               }
@@ -395,7 +412,12 @@
         if (body) {
           xhrParams.data = JSON.stringify(body);
         }
-        jQuery.ajax(xhrParams).done(done).fail(fail);
+        jQuery.ajax(xhrParams).done(function(data, textStatus, jqXHR) {
+                          if (data['entity-type']=='document') {
+                            data = documentWrapper(data);
+                          }
+                          done(data,textStatus, jqXHR);
+                      }).fail(fail);
     }
 
     docLoc.fetch = function(options) {
@@ -461,6 +483,42 @@
 
   nuxeo.document = nuxeo.doc = function(docRef) {
     return location(undefined, docRef);
+  }
+
+  function documentWrapper(doc) {
+
+    doc.update = function (properties) {
+      if (!doc.dirtyFields) {
+        doc.dirtyFields = [];
+      }
+      for (var key in properties) {
+        doc.properties[key] = properties[key];
+        doc.dirtyFields.push(key);
+      }
+      return doc;
+      };
+
+    doc.getDirtyFields = function () {
+      var dirty = {};
+      for (var i = 0; i< doc.dirtyFields.length; i++) {
+        dirty[doc.dirtyFields[i]] = doc.properties[doc.dirtyFields[i]];
+      }
+      return dirty;
+    }
+
+    doc.getChangeSet = function () {
+      return {
+        "entity-type": "document",
+          "repository": doc.repository,
+          "uid": doc.uid,
+          "properties": doc.getDirtyFields()
+      }
+    }
+
+    doc.save = function(done,failed) {
+      nuxeo.document(doc).update({}, doc.getChangeSet());
+    }
+    return doc;
   }
 
   // ************************************

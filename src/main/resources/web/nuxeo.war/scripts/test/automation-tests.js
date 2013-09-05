@@ -326,7 +326,7 @@ describe("Nuxeo automation", function() {
       function checkDocFetcher(data) {
         doc = data;
         expect(doc.uid).to.exist;
-        done()
+        done();
       }
 
       nuxeo.doc("/default-domain").fetch({done : checkDocFetcher , fail : failCallback});
@@ -334,21 +334,25 @@ describe("Nuxeo automation", function() {
 
     it("update fetched document", function(done) {
         function checkDocUpdated(data) {
+          console.log("checking update result");
           doc = data;
           expect(doc.uid).to.exist;
-          done()
+          expect(doc.properties['dc:source']).to.equal(newSourceValue);
+          done();
         }
 
-        doc.update({'dc:source':'automation'});
+        var newSourceValue = 'automaton-test-' + (new Date()).getTime();
+
+        doc.update({'dc:source':newSourceValue});
         expect(doc.getChangeSet,"getChangeSet method should have been added to document object").to.exist;
         expect(doc.getChangeSet(), "getChangeSet method should return a minimal doc").to.exist;
         expect(doc.getChangeSet().properties, "getChangeSet method should return a doc with non  empty properties").to.exist;
         expect(doc.getChangeSet().properties['dc:source'], "getChangeSet should contains an entry for dc:source").to.exist;
         expect(doc.save, "save method should have been added to document object").to.exist;
 
-        doc.save({done : function(data) {
-           doc = data;
-        }, fail : failCallback});
+        console.log("saving");
+
+        doc.save({done : checkDocUpdated , fail : failCallback});
       })
 
   })

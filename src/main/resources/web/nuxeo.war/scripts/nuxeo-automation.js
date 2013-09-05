@@ -133,7 +133,7 @@
             xhr.setRequestHeader("X-File-Idx", uploadIdx);
 
             xhr.setRequestHeader('Nuxeo-Transaction-Timeout', uploadTimeoutS);
-            xhr.setRequestHeader("Content-Type", "multipart/form-data");
+            //xhr.setRequestHeader("Content-Type", "multipart/form-data");
             nbUploadInprogress++;
 
             options.handler.uploadStarted(uploadIdx, file);
@@ -409,6 +409,7 @@
               }
             }
         }
+        xhrParams.contentType = 'application/json+nxentity';
         if (body) {
           xhrParams.data = JSON.stringify(body);
         }
@@ -515,8 +516,8 @@
       }
     }
 
-    doc.save = function(done,failed) {
-      nuxeo.document(doc).update({}, doc.getChangeSet());
+    doc.save = function(options) {
+      nuxeo.document(doc).update(options, doc.getChangeSet());
     }
     return doc;
   }

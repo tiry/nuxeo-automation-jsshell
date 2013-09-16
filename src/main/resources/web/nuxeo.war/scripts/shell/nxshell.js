@@ -297,7 +297,7 @@
             }
           }
           callback(suggestions);
-        },         
+        },
         path : function(term, totalInput, value, callback ) {
           var suggestions = [];
 
@@ -467,8 +467,8 @@
        prompt: 'nx> ',
        name: 'nxshell',
        tabcompletion : true,
-       width: '800px',
-       height: '300px',
+       width: 'auto',
+       height: '350px',
    }
 
    nuxeo.shell = function(filter, opts) {
@@ -494,17 +494,45 @@
                 }, opts);
        } else {
         // auto-build UI
-        htmlOb = jQuery("<div><div>");
-        htmlOb.css("width", opts.width);
-        htmlOb.css("height", opts.height);
-        htmlOb.addClass("terminal");
+        var termDiv = jQuery("<div><div>");
+        if (opts.width == 'auto') {
+          var docWidth = jQuery(document).width();
+          opts.width = docWidth-60;
+        }
+        termDiv.css("width", opts.width);
+        termDiv.css("height", opts.height);
+        termDiv.addClass("terminal");
+        termDiv.css("float", "left");
+
+        // add bar
+        var bar = jQuery("<div></div>");
+        bar.addClass("terminalBar");
+        bar.css("float", "left");
+        bar.css("height", opts.height);
+        bar.css("width", "55px");
+        bar.css("backgroundColor", "#CCCCCC");
+
+        htmlOb = jQuery("<div></div>");
+
         htmlOb.css("display","none");
         htmlOb.css("border-style","solid");
         htmlOb.css("border-width","1px");
         htmlOb.css("border-color","#AAAAAA");
+
+        htmlOb.css("height", (termDiv.height()+ 3) + "px" );
+        htmlOb.css("width", (termDiv.width()+ 58) + "px" );
+
+        htmlOb.append(termDiv);
+        htmlOb.append(bar);
+
+        bar.append(jQuery("<div>Help</div>"));
+        bar.append(jQuery("<div>Tests</div>"));
+        bar.append(jQuery("<div>Hide</div>"));
+        bar.append(jQuery("<div>Popup</div>"));
+
         jQuery("body").prepend(htmlOb);
         htmlOb.show('slow','swing', function() {
-            htmlOb.terminal(function (cmd, term)
+          termDiv.terminal(function (cmd, term)
                     {
                       return nx.nxTermHandler(cmd, term)
                     }, opts);
@@ -513,7 +541,6 @@
        // setup hide callback
        nuxeo.shell_instance = htmlOb;
        nx.hide = function() {htmlOb.hide('slow')};
-
        };
 
 })(jQuery,this.nuxeo === undefined ? this.nuxeo = {} : this.nuxeo);

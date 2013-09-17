@@ -13,6 +13,7 @@
       this.builtins = [];
       this.ctx = { path : "/" };
       this.opts = opts;
+      this.terminal = null;
 
       var me = this;
       var shell = this;
@@ -429,6 +430,7 @@
           // init shell object
           // 1 - init BuiltIns
           initBuiltIns();
+          this.terminal = term;
           console.log("built-ins ready");
           // 2 - fetch Operation definitions
           this.fetchAutomationDefs();
@@ -468,7 +470,7 @@
        name: 'nxshell',
        tabcompletion : true,
        width: 'auto',
-       height: '350px',
+       height: '300px',
    }
 
    nuxeo.shell = function(filter, opts) {
@@ -499,6 +501,14 @@
           var docWidth = jQuery(document).width();
           opts.width = docWidth-60;
         }
+
+        var fullH = jQuery(window).height()-20;
+        var smallH = opts.height;
+        if (smallH.indexOf("px")>0) {
+          smallH = smallH.substring(0,smallH.length-2);
+        }
+        smallH = parseInt(smallH);
+
         termDiv.css("width", opts.width);
         termDiv.css("height", opts.height);
         termDiv.addClass("terminal");
@@ -525,10 +535,56 @@
         htmlOb.append(termDiv);
         htmlOb.append(bar);
 
-        bar.append(jQuery("<div>Help</div>"));
-        bar.append(jQuery("<div>Tests</div>"));
-        bar.append(jQuery("<div>Hide</div>"));
-        bar.append(jQuery("<div>Popup</div>"));
+        function mkButton(label, cb) {
+          var btn = jQuery("<div>" + label + "</div>");
+          btn.css("text-align", "center");
+          btn.css("cursor", "pointer");
+          btn.css("border-style","outset");
+          btn.css("border-width","2px");
+          btn.css("border-color","#666666");
+          if (cb) {
+            btn.click(function (event) {
+              cb(event, nx.terminal);
+            });
+          }
+          return btn;
+        }
+
+        bar.append(mkButton("Help", function(event, term) {
+          term.exec("help", false);
+        }));
+        bar.append(mkButton("Hide", function(event, term) {
+          htmlOb.hide('slow')
+        }));
+        bar.append(mkButton("Popup", function(event, term) {
+
+        }));
+        bar.append(mkButton("PUp", function(event, term) {
+          term.scroll("-100");
+        }));
+        bar.append(mkButton("PDown", function(event, term) {
+          term.scroll("100");
+        }));
+
+        var fullScreenBtn = mkButton("full", function(event, term) {
+           htmlOb.css("height",(fullH +3) + "px" );
+           bar.css("height", fullH + "px");
+           termDiv.css("height", fullH + "px");
+           fullScreenBtn.css("display","none");
+           smallScreenBtn.css("display","block");
+        });
+
+        var smallScreenBtn = mkButton("small", function(event, term) {
+            htmlOb.css("height",(smallH+3) + "px" );
+            bar.css("height", smallH + "px");
+            termDiv.css("height", smallH + "px");
+            fullScreenBtn.css("display","block");
+            smallScreenBtn.css("display","none");
+         });
+
+        smallScreenBtn.css("display","none");
+        bar.append(fullScreenBtn);
+        bar.append(smallScreenBtn);
 
         jQuery("body").prepend(htmlOb);
         htmlOb.show('slow','swing', function() {

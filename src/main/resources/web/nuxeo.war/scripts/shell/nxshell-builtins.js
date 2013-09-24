@@ -40,9 +40,17 @@
 
       hide  : {
           impl : function (cmds, term, shell) {
-            shell.hide();
+            shell.hide(term);
           },
           help : "Hides current terminal",
+          suggest : []
+      },
+
+      load  : {
+          impl : function (cmds, term, shell) {
+            shell.loadState();
+          },
+          help : "load state",
           suggest : []
       },
 

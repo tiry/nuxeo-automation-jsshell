@@ -425,6 +425,33 @@
           }
         }
 
+        nxshell.prototype.saveState = function() {
+          if (window.localStorage) {
+            var tState = {};
+            tState.termState = this.terminal.export_view();
+            tState.ctx = this.ctx;
+
+            console.log(JSON.stringify(tState));
+
+            localStorage.setItem("nxshellState", JSON.stringify(tState));
+          }
+        }
+
+        nxshell.prototype.loadState = function() {
+            if (window.localStorage) {
+                var state = localStorage.getItem("nxshellState");
+                if (state) {
+                  var tState = JSON.parse(state);
+                  console.log(tState);
+                  this.ctx = tState.ctx;
+                  this.terminal.import_view(tState.termState);
+                  return true;
+                }
+            }
+            return false;
+          }
+
+
         nxshell.prototype.init = function(term) {
           // **************************
           // init shell object
@@ -445,24 +472,20 @@
           if (!root) {
             root = "/";
           }
-          /*if (!root.indexOf("/")==0) {
-            root = "id:" + root;
-          }*/
-          console.log("init root on " + root);
-          nuxeo.operation('Document.Fetch' , { automationParams : {params : { value : root}}})
-                    .done(function(data, status,xhr) {
-                      console.log("init root done");
-                      me.ctx.path = data.path;
-                      me.ctx.doc = data;
-                      term.echo("Connected on repository '" + data.repository + "'");
-                      term.echo(" current path is " + data.path + "(" + data.uid + ")");
-                    })
-                    .fail(function(xhr,status) {
-                      console.log("Error " + status);
-                    })
-                    .execute();
-        }
 
+          nuxeo.operation('Document.Fetch' , { automationParams : {params : { value : root}}})
+                .done(function(data, status,xhr) {
+                  console.log("init root done");
+                  me.ctx.path = data.path;
+                  me.ctx.doc = data;
+                  term.echo("Connected on repository '" + data.repository + "'");
+                  term.echo(" current path is " + data.path + "(" + data.uid + ")");
+                })
+                .fail(function(xhr,status) {
+                  console.log("Error " + status);
+                })
+                .execute();
+          }
     };
 
    nuxeo.DEFAULT_NXSHELL = {
@@ -470,15 +493,22 @@
        name: 'nxshell',
        tabcompletion : true,
        width: 'auto',
-       height: '300px',
+       height: '400px',
    }
 
    nuxeo.shell = function(filter, opts) {
        opts = jQuery.extend({}, nuxeo.DEFAULT_NXSHELL , opts);
+
        var nx = new nxshell(opts);
        opts.greetings = function() { return nx.nxGreetings()};
        opts.completion =  function (term,input,callback)  { return nx.completion(term,input,callback)};
        opts.onInit = function(term) { return nx.init(term)};
+       opts.keydown = function (event, term) {
+           if (event.keyCode==192) {
+             nx.hide(term);
+             return false;
+           }
+         }
        var htmlOb = nuxeo.shell_instance;
        if (htmlOb) {
        if (htmlOb.css("display")=='block') {
@@ -554,10 +584,11 @@
           term.exec("help", false);
         }));
         bar.append(mkButton("Hide", function(event, term) {
-          htmlOb.hide('slow')
+          nx.hide(term);
         }));
         bar.append(mkButton("Popup", function(event, term) {
-
+          window.open("/nuxeo/jsterm_popup.html", '_blank', 'toolbar=0, scrollbars=1, location=0, statusbar=0, menubar=0, resizable=1, dependent=1, width=1024, height=768');
+          htmlOb.hide('slow')
         }));
         bar.append(mkButton("PUp", function(event, term) {
           term.scroll("-100");
@@ -596,8 +627,19 @@
        }
        // setup hide callback
        nuxeo.shell_instance = htmlOb;
-       nx.hide = function() {htmlOb.hide('slow')};
+       nx.hide = function(term) {
+         htmlOb.hide('slow');
+         //nx.saveState();
+         };
        };
+       //nx.loadState();
 
 })(jQuery,this.nuxeo === undefined ? this.nuxeo = {} : this.nuxeo);
 
+// bind keyboard shortcut
+jQuery(document).bind("keydown", function(e) {
+  if (event.keyCode==192) {
+    nuxeo.shell();
+    return false;
+  }
+});

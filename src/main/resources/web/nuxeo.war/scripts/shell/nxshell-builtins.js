@@ -46,13 +46,33 @@
           suggest : []
       },
 
-      load  : {
+      loadState  : {
           impl : function (cmds, term, shell) {
             shell.loadState();
           },
-          help : "load state",
+          help : "load termial state",
           suggest : []
       },
+
+      saveState  : {
+          impl : function (cmds, term, shell) {
+            shell.saveState();
+          },
+          help : "save terminal state",
+          suggest : []
+      },
+
+      js  : {
+          impl : function (cmds, term, shell) {
+          cmds.shift();
+          var jsCommand = cmds.join(" ");
+            eval(jsCommand);
+            //jQuery.globalEval( jsCommand );
+          },
+          help : "execute js command",
+          suggest : []
+      },
+
 
       view  : {
         impl : function (cmds, term, shell) {

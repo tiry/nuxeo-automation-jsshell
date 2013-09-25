@@ -299,6 +299,34 @@
           }
           callback(suggestions);
         },
+        nuxeoRest : function(term, totalInput, value, callback ) {
+            var jsCommand = term.get_command().trim();
+            var suggestions = [];
+
+            if (query.indexOf("*")<0) {
+              suggestions.push("*");
+            } else {
+              if (query.indexOf(" from")<0) {
+                suggestions.push("from");
+              } else {
+                if (query.indexOf(" where ")<0) {
+                  suggestions.push("Document");
+                  suggestions.push("File");
+                  suggestions.push("Folder");
+                  suggestions.push("Workspace");
+                  suggestions.push("where");
+                } else {
+                  suggestions.push("and");
+                  suggestions.push("or");
+                  suggestions.push("ecm:uuid");
+                  suggestions.push("ecm:path");
+                  suggestions.push("ecm:parentId");
+                  suggestions.push("ecm:isCheckedInVersion");
+                }
+              }
+            }
+            callback(suggestions);
+          },
         path : function(term, totalInput, value, callback ) {
           var suggestions = [];
 
@@ -370,9 +398,69 @@
         }
       }
 
+      nxshell.prototype.restCallCompletion = function (term,input,callback) {
+          var suggestions = [];
+          console.log("input = " + input);
+          var nodes = input.split("\.");
+          var lastNode = nodes.pop();
+          if (lastNode=="") {
+            lastNode = nodes.pop();
+          }
+          var previousNode = nodes.pop();
+
+          console.log("nodes:", previousNode, lastNode);
+
+          if (lastNode == "nuxeo" || previousNode == "nuxeo") {
+            suggestions.push("nuxeo.doc(");
+          }
+          if (lastNode.indexOf("doc(")==0) {
+            var locator = lastNode.substring(lastNode.indexOf("doc("));
+            console.log("locator", locator);
+            if (locator.indexOf(")")>0) {
+              nodes = input.split("\.");
+              var segments = nodes;
+              segments.pop();
+              var prefix = segments.join(".");
+              suggestions.push(prefix+".update");
+              suggestions.push(prefix+".create");
+              suggestions.push(prefix+".fetch");
+              suggestions.push(prefix+".update");
+              suggestions.push(prefix+".delete");
+            } else {
+              locator = locator.substring(0,locator.indexOf(")"));
+              console.log("locator=", locator);
+              // return path suggester
+              return;
+            }
+          } else if (previousNode.indexOf("doc(")==0) {
+              console.log("here2");
+              nodes = input.split("\.");
+              var segments = nodes;
+              segments.pop();
+              var prefix = segments.join(".");
+              console.log("prefix", prefix);
+              suggestions.push(prefix+".update");
+              suggestions.push(prefix+".create");
+              suggestions.push(prefix+".fetch");
+              suggestions.push(prefix+".update");
+              suggestions.push(prefix+".delete");
+              console.log(suggestions);
+          } else {
+            console.log("too bad");
+          }
+          callback(suggestions);
+      }
+
       nxshell.prototype.completion = function (term,input,callback) {
           var existingInput = term.get_command().trim();
           var suggestions = [];
+
+          console.log("try to comple "  + existingInput);
+          if (existingInput.indexOf("nuxeo.")==0) {
+            console.log("nuxeo rest mode");
+            shell.restCallCompletion(term, existingInput, callback);
+            return;
+          }
           var cmd = this.findBuiltin(existingInput.split(" ")[0]);
           if (cmd) {
             shell.cmdParamCompletion(term, cmd, existingInput, callback);
@@ -430,8 +518,8 @@
             var tState = {};
             tState.termState = this.terminal.export_view();
             tState.ctx = this.ctx;
-
-            console.log(JSON.stringify(tState));
+            tState.termState.lines.shift();
+            console.log(tState);
 
             localStorage.setItem("nxshellState", JSON.stringify(tState));
           }
@@ -442,7 +530,21 @@
                 var state = localStorage.getItem("nxshellState");
                 if (state) {
                   var tState = JSON.parse(state);
-                  console.log(tState);
+                  console.log("loading");
+                  var lines = tState.termState.lines;
+                  console.log("loading 1");
+                  console.log(lines);
+                  console.log(typeof(lines));
+
+                  lines = lines.substring(1, lines.length()-2);
+                  console.log("loading 2");
+                  console.log(lines);
+                  lines= lines.split(",");
+                  console.log("loading 3");
+                  console.log(lines);
+                  tState.termState.lines = lines;
+                  console.log("loading 4");
+                  console.log(tState.termState);
                   this.ctx = tState.ctx;
                   this.terminal.import_view(tState.termState);
                   return true;
@@ -450,7 +552,6 @@
             }
             return false;
           }
-
 
         nxshell.prototype.init = function(term) {
           // **************************
@@ -503,21 +604,27 @@
        opts.greetings = function() { return nx.nxGreetings()};
        opts.completion =  function (term,input,callback)  { return nx.completion(term,input,callback)};
        opts.onInit = function(term) { return nx.init(term)};
-       opts.keydown = function (event, term) {
-           if (event.keyCode==192) {
-             nx.hide(term);
-             return false;
-           }
-         }
        var htmlOb = nuxeo.shell_instance;
        if (htmlOb) {
-       if (htmlOb.css("display")=='block') {
-         htmlOb.hide('slow');
-       } else {
-         htmlOb.show('slow');
-       }
+         if (htmlOb.css("display")=='block') {
+           htmlOb.hide('slow');
+         } else {
+           htmlOb.show('slow');
+         }
          return;
        }
+
+       opts.keydown = function (event, term) {
+           if (event.keyCode==192) {
+             if (htmlOb && htmlOb.css("display")!='block'){
+               return true;
+             } else {
+                 nx.hide(term);
+               return false;
+               }
+           }
+        }
+
        if (filter) {
         htmlOb = jQuery(filter);
         htmlOb.terminal(function (cmd, term)

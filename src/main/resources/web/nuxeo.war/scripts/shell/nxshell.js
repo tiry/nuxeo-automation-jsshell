@@ -444,10 +444,10 @@
               suggestions.push(prefix+".fetch");
               suggestions.push(prefix+".update");
               suggestions.push(prefix+".delete");
-              console.log(suggestions);
           } else {
             console.log("too bad");
           }
+          console.log(suggestions);
           callback(suggestions);
       }
 
@@ -672,12 +672,20 @@
         htmlOb.append(termDiv);
         htmlOb.append(bar);
 
-        function mkButton(label, cb) {
+        function mkButton(label, cb, img) {
           var btn = jQuery("<div>" + label + "</div>");
+          if (img) {
+            var icon = jQuery('<img src="' + '/nuxeo/icons/shell/' + img + '" title="' + label + '"/>'  );
+            btn = jQuery("<div></div>");
+            btn.append(icon);
+          }
+
           btn.css("text-align", "center");
           btn.css("cursor", "pointer");
-          btn.css("border-style","outset");
-          btn.css("border-width","2px");
+          btn.css("border-style","solid");
+          btn.css("border-width","1px");
+          btn.css("background-color","#AAAAAA");
+          btn.css("padding","3px");
           btn.css("border-color","#666666");
           if (cb) {
             btn.click(function (event) {
@@ -689,36 +697,36 @@
 
         bar.append(mkButton("Help", function(event, term) {
           term.exec("help", false);
-        }));
+        },"question.png"));
         bar.append(mkButton("Hide", function(event, term) {
           nx.hide(term);
-        }));
+        },"menu.png"));
         bar.append(mkButton("Popup", function(event, term) {
           window.open("/nuxeo/jsterm_popup.html", '_blank', 'toolbar=0, scrollbars=1, location=0, statusbar=0, menubar=0, resizable=1, dependent=1, width=1024, height=768');
           htmlOb.hide('slow')
-        }));
-        bar.append(mkButton("PUp", function(event, term) {
+        },"console.png"));
+        bar.append(mkButton("Page Up", function(event, term) {
           term.scroll("-100");
-        }));
-        bar.append(mkButton("PDown", function(event, term) {
+        },"arrow-up.png"));
+        bar.append(mkButton("Page Down", function(event, term) {
           term.scroll("100");
-        }));
+        },"arrow-down.png"));
 
-        var fullScreenBtn = mkButton("full", function(event, term) {
+        var fullScreenBtn = mkButton("Fullscreen", function(event, term) {
            htmlOb.css("height",(fullH +3) + "px" );
            bar.css("height", fullH + "px");
            termDiv.css("height", fullH + "px");
            fullScreenBtn.css("display","none");
            smallScreenBtn.css("display","block");
-        });
+        }, "expand.png");
 
-        var smallScreenBtn = mkButton("small", function(event, term) {
+        var smallScreenBtn = mkButton("Small terminal", function(event, term) {
             htmlOb.css("height",(smallH+3) + "px" );
             bar.css("height", smallH + "px");
             termDiv.css("height", smallH + "px");
             fullScreenBtn.css("display","block");
             smallScreenBtn.css("display","none");
-         });
+         }, "contract.png");
 
         smallScreenBtn.css("display","none");
         bar.append(fullScreenBtn);

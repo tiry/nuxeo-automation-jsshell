@@ -2174,6 +2174,8 @@
                         for (i=commands.length; i--;) {
                             if (reg.test(commands[i])) {
                                 matched.push(commands[i]);
+                            } else if (commands[i].indexOf(string)==0) {
+                                matched.push(commands[i]);
                             }
                         }
                         if (matched.length === 1) {

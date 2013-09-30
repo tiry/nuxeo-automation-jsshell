@@ -299,7 +299,7 @@
   // REST binding
 
   nuxeo.DEFAULT_REST_OPTIONS = {
-          url: "/nuxeo/site/api",
+          url: "/nuxeo/site/api/v1",
           execTimeout: 30000,
           documentSchemas: "dublincore"
     }
@@ -466,7 +466,7 @@
 
     docLoc.op = docLoc.operation = function (operationId, options) {
       var opts = jQuery.extend({}, nuxeo.DEFAULT_AUTOMATION_OPTIONS, options);
-      var url = opts.url.replace("/automation", "/api");
+      var url = opts.url.replace("/automation", "/api/v1");
       url = encodeDocRef(url, this.docRef);
       if (this.repo) {
         opts.repository = this.repo;

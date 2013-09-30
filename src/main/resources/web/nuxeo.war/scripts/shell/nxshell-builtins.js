@@ -129,7 +129,6 @@
 
       ls : {
         impl : function (cmds, term, shell) {
-        console.log("ls =>", this);
         var target = shell.ctx.doc.uid;
         if (cmds.length>1) {
           if (cmds[1].indexOf("uid:")==0) {
@@ -189,9 +188,7 @@
         var postProcess;
         if (postCommand) {
           postProcess = function(doc, term, cb) {
-          console.log("postProcess", doc, cb);
             var cmds = postCommand.trim().split(" ");
-            console.log(cmds);
             var op = shell.findOperation(cmds[0]);
             var opts = {automationParams : { params : {},
                 context : {}} };

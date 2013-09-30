@@ -426,7 +426,7 @@
             absolutePath = absolutePath + value;
           }
 
-          console.log("absolutePath=" + absolutePath);
+          //console.log("absolutePath=" + absolutePath);
 
           var parentPath = absolutePath.substring(0, absolutePath.lastIndexOf("/")+1);
           var name = absolutePath.substring(absolutePath.lastIndexOf("/")+1);
@@ -459,7 +459,7 @@
                   suggestions.push(docs.entries[i].path);
                 }
                }
-               console.log("suggestions",suggestions);
+               //console.log("suggestions",suggestions);
                callback(suggestions);
               })
           .fail(function (xhr, status) { console.log("Error", status);})
@@ -490,7 +490,7 @@
 
       nxshell.prototype.restCallCompletion = function (term,input,callback) {
           var suggestions = [];
-          console.log("input = " + input);
+          //console.log("input = " + input);
           var nodes = input.split("\.");
           var lastNode = nodes.pop();
           if (lastNode=="") {
@@ -498,14 +498,14 @@
           }
           var previousNode = nodes.pop();
 
-          console.log("nodes:", previousNode, lastNode);
+          //console.log("nodes:", previousNode, lastNode);
 
           if (lastNode == "nuxeo" || previousNode == "nuxeo") {
             suggestions.push("nuxeo.doc(");
           }
           if (lastNode.indexOf("doc(")==0) {
             var locator = lastNode.substring(lastNode.indexOf("doc("));
-            console.log("locator", locator);
+            //console.log("locator", locator);
             if (locator.indexOf(")")>0) {
               nodes = input.split("\.");
               var segments = nodes;
@@ -518,17 +518,17 @@
               suggestions.push(prefix+".delete");
             } else {
               locator = locator.substring(0,locator.indexOf(")"));
-              console.log("locator=", locator);
+              //console.log("locator=", locator);
               // return path suggester
               return;
             }
           } else if (previousNode.indexOf("doc(")==0) {
-              console.log("here2");
+              //console.log("here2");
               nodes = input.split("\.");
               var segments = nodes;
               segments.pop();
               var prefix = segments.join(".");
-              console.log("prefix", prefix);
+              //console.log("prefix", prefix);
               suggestions.push(prefix+".update");
               suggestions.push(prefix+".create");
               suggestions.push(prefix+".fetch");
@@ -537,7 +537,7 @@
           } else {
             console.log("too bad");
           }
-          console.log(suggestions);
+          //console.log(suggestions);
           callback(suggestions);
       }
 
@@ -545,9 +545,9 @@
           var existingInput = term.get_command().trim();
           var suggestions = [];
 
-          console.log("try to comple "  + existingInput);
+          //console.log("try to comple "  + existingInput);
           if (existingInput.indexOf("nuxeo.")==0) {
-            console.log("nuxeo rest mode");
+            //console.log("nuxeo rest mode");
             shell.restCallCompletion(term, existingInput, callback);
             return;
           }
@@ -620,21 +620,13 @@
                 var state = localStorage.getItem("nxshellState");
                 if (state) {
                   var tState = JSON.parse(state);
-                  console.log("loading");
+                  //console.log("loading");
                   var lines = tState.termState.lines;
-                  console.log("loading 1");
-                  console.log(lines);
-                  console.log(typeof(lines));
-
                   lines = lines.substring(1, lines.length()-2);
-                  console.log("loading 2");
                   console.log(lines);
                   lines= lines.split(",");
-                  console.log("loading 3");
                   console.log(lines);
                   tState.termState.lines = lines;
-                  console.log("loading 4");
-                  console.log(tState.termState);
                   this.ctx = tState.ctx;
                   this.terminal.import_view(tState.termState);
                   return true;
@@ -666,7 +658,6 @@
 
           nuxeo.operation('Document.Fetch' , { automationParams : {params : { value : root}}})
                 .done(function(data, status,xhr) {
-                  console.log("init root done");
                   me.ctx.path = data.path;
                   me.ctx.doc = data;
                   term.echo("Connected on repository '" + data.repository + "'");

@@ -93,52 +93,56 @@
         me.displayNavigationPrompt(term, prevCB, nextCB);
       }
 
-      nxshell.prototype.displayPagesFromOperation = function (term, operation) {
+      nxshell.prototype.displayPagesFromOperation = function (term, operation, postProcess) {
 
-        var doDisplayItem = function (doc, term, next) {
-          term.echo(shell.printDoc(docs.entries[i], shell.ctx.doc.path));
-              term.pause();
-              window.setTimeout(function() {
-                term.resume();
-                term.echo("update done!!!");
-              }, 1000);
-        }
+          var doDisplayItem = function (doc, term, cbStack) {
+                term.echo(shell.printDoc(doc, shell.ctx.doc.path));
+                var next = function() {
+                    if (cbStack.length>0) {
+                        cbStack.pop()();
+                      }
+                }
+                if (postProcess) {
+                  postProcess(doc, term, next);
+                } else {
+                  next();
+                }
+          }
           var doDisplayPage = function(docs, term) {
- //       	  var cb = [];
+             var cb = [];
               for (var i =0 ; i < docs.entries.length; i++) {
-
-//            	  cb.push(function() {doDisplayItem(docs.entries[i], term, cb)});
-                term.echo(shell.printDoc(docs.entries[i], shell.ctx.doc.path));
-/*                term.pause();
-                window.setTimeout(function() {
-                  term.resume();
-                  term.echo("update done!!!");
-                }, 1000);*/
+                var doc = docs.entries[i];
+                cb.push(function() {doDisplayItem(doc, term, cb)});
               }
-              if (docs.pageCount==1) {
-               return;
-              }
-              var idx = docs.pageIndex;
-              var prevIdx = idx-1;
-              var nextIdx = idx+1;
+              cb.push(function() {
+                  if (docs.pageCount==1) {
+                      return;
+                     }
+                     var idx = docs.pageIndex;
+                     var prevIdx = idx-1;
+                     var nextIdx = idx+1;
 
-              var prevCB = function() { term.pop();fetchPage(prevIdx, term)};
-              var nextCB = function() { term.pop();fetchPage(nextIdx, term)};
+                     var prevCB = function() { term.pop();fetchPage(prevIdx, term)};
+                     var nextCB = function() { term.pop();fetchPage(nextIdx, term)};
 
-              if (prevIdx < 0) {
-               prevCB = function(){};
-              };
-              if (nextIdx > (docs.pageCount-1)) {
-               nextCB = function(){
-                 term.echo("... no more items to display ... exit");
-                 // double nesting
-                 term.pop();
-                 term.pop();
-                 term.set_prompt(shell.opts.prompt);
-               };
-              }
-              term.echo("  [ display page : " + (docs.pageIndex+1) + "/" + docs.pageCount + "]");
-              me.displayNavigationPrompt(term,prevCB,nextCB);
+                     if (prevIdx < 0) {
+                      prevCB = function(){};
+                     };
+                     if (nextIdx > (docs.pageCount-1)) {
+                      nextCB = function(){
+                        term.echo("... no more items to display ... exit");
+                        // double nesting
+                        term.pop();
+                        term.pop();
+                        term.set_prompt(shell.opts.prompt);
+                      };
+                     }
+                     term.echo("  [ display page : " + (docs.pageIndex+1) + "/" + docs.pageCount + "]");
+                     me.displayNavigationPrompt(term,prevCB,nextCB);
+              })
+
+              cb.reverse();
+              cb.pop()();
            }
 
            function successCB(data, status,xhr, term) {

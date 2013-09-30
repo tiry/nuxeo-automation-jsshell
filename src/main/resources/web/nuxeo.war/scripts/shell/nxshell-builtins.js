@@ -202,11 +202,11 @@
             opts.automationParams.input = "doc:" + doc.uid;
             nuxeo.operation(op.id, opts)
             .done(function(data, status,xhr) {
-              term.echo("executed " + op.id + "ok");
+              term.echo("   ... executed " + op.id + "[[bi;#00FF00;#0] ok ]");
               cb();
             })
             .fail(function(xhr,status) {
-              term.echo("executed " + op.id + "Failed");
+              term.echo("   ... execution of " + op.id + "[[bi;#FF0000;#0] failed ]");
               cb();
             })
             .execute();

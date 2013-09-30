@@ -172,8 +172,8 @@
            var prevIdx = idx-1;
            var nextIdx = idx+1;
 
-           var prevCB = function() { fetchPage(prevIdx, term)};
-           var nextCB = function() { fetchPage(nextIdx, term)};
+           var prevCB = function() { term.pop();fetchPage(prevIdx, term)};
+           var nextCB = function() { term.pop();fetchPage(nextIdx, term)};
 
            if (prevIdx < 0) {
             prevCB = function(){};
@@ -188,7 +188,6 @@
             };
            }
            term.echo("  [ display page : " + (docs.pageIndex+1) + "/" + docs.pageCount + "]");
-
            shell.displayNavigationPrompt(term,prevCB,nextCB);
         }
 

@@ -71,9 +71,11 @@
           return;
         }
         var nextCB = function() {
+          term.pop();
           me.displayPages(term, list, pageSize, offset+pageSize);
         }
         var prevCB = function() {
+          term.pop();
           me.displayPages(term, list, pageSize, offset-pageSize);
         }
         if (offset+pageSize> list.length) {

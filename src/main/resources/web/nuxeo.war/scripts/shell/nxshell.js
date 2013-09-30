@@ -62,7 +62,7 @@
         });
       }
 
-      nxshell.prototype.displayPages = function (term, list, pageSize, offset) {
+      nxshell.prototype.displayPagesFromList = function (term, list, pageSize, offset) {
 
         for (var idx = offset; (idx < list.length) && (idx < offset + pageSize) ; idx++) {
           term.echo(list[idx]);
@@ -72,11 +72,11 @@
         }
         var nextCB = function() {
           term.pop();
-          me.displayPages(term, list, pageSize, offset+pageSize);
+          me.displayPagesFromList(term, list, pageSize, offset+pageSize);
         }
         var prevCB = function() {
           term.pop();
-          me.displayPages(term, list, pageSize, offset-pageSize);
+          me.displayPagesFromList(term, list, pageSize, offset-pageSize);
         }
         if (offset+pageSize> list.length) {
           term.echo(" ... end of listing ... ");
@@ -91,6 +91,71 @@
         }
 
         me.displayNavigationPrompt(term, prevCB, nextCB);
+      }
+
+      nxshell.prototype.displayPagesFromOperation = function (term, operation) {
+
+        var doDisplayItem = function (doc, term, next) {
+          term.echo(shell.printDoc(docs.entries[i], shell.ctx.doc.path));
+              term.pause();
+              window.setTimeout(function() {
+                term.resume();
+                term.echo("update done!!!");
+              }, 1000);
+        }
+          var doDisplayPage = function(docs, term) {
+ //       	  var cb = [];
+              for (var i =0 ; i < docs.entries.length; i++) {
+
+//            	  cb.push(function() {doDisplayItem(docs.entries[i], term, cb)});
+                term.echo(shell.printDoc(docs.entries[i], shell.ctx.doc.path));
+/*                term.pause();
+                window.setTimeout(function() {
+                  term.resume();
+                  term.echo("update done!!!");
+                }, 1000);*/
+              }
+              if (docs.pageCount==1) {
+               return;
+              }
+              var idx = docs.pageIndex;
+              var prevIdx = idx-1;
+              var nextIdx = idx+1;
+
+              var prevCB = function() { term.pop();fetchPage(prevIdx, term)};
+              var nextCB = function() { term.pop();fetchPage(nextIdx, term)};
+
+              if (prevIdx < 0) {
+               prevCB = function(){};
+              };
+              if (nextIdx > (docs.pageCount-1)) {
+               nextCB = function(){
+                 term.echo("... no more items to display ... exit");
+                 // double nesting
+                 term.pop();
+                 term.pop();
+                 term.set_prompt(shell.opts.prompt);
+               };
+              }
+              term.echo("  [ display page : " + (docs.pageIndex+1) + "/" + docs.pageCount + "]");
+              me.displayNavigationPrompt(term,prevCB,nextCB);
+           }
+
+           function successCB(data, status,xhr, term) {
+             doDisplayPage(data, term);
+           };
+
+           function errorCB(xhr,status, term) {
+             term.echo("Error " + status);
+           };
+
+           var fetchPage = function (page, term) {
+             operation.param("page", page);
+             operation.initCallbacks();
+             operation.done(function(data, status,xhr) { successCB(data,status, xhr, term) }).fail(function (xhr, status) { errorCB(xhr, status, term);}).execute();
+           }
+           fetchPage(0, term);
+
       }
 
       nxshell.prototype.resolvePath = function (path) {
@@ -157,7 +222,7 @@
           for (var idx=0; idx < this.automationDefs.operations.length; idx++) {
             lines.push("[[b;#00EE00;#0]" + this.automationDefs.operations[idx].id + "] : [[i;#CCCCCC;#0]" + this.automationDefs.operations[idx].label + "]");
           }
-          this.displayPages(term, lines, 10, 0);
+          this.displayPagesFromList(term, lines, 10, 0);
         } else {
           var cmdOp = this.findBuiltin(cmd);
           if (cmdOp) {

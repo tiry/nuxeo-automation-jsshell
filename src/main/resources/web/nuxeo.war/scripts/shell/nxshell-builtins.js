@@ -102,7 +102,10 @@
             term.echo("[[i;#DDDDFF;#0] state ] : " + doc.state);
             term.echo("[[i;#DDDDFF;#0] properties ] : ");
             var props = [];
-            for (var propName in doc.properties) {
+            var propNames = Object.keys(doc.properties);
+            propNames.sort;
+            for (var pIdx = 0; pIdx < propNames.length; pIdx++) {
+               var propName = propNames[pIdx];
                var propNameLen = propName.length;
                if (propNameLen > 25) {
                   propNameLen = 25;
@@ -112,7 +115,7 @@
                if (typeof(propValue)=='object') {
                   propValue = JSON.stringify(propValue, null, "\t");
                }
-               props.push("[[i;#DDDDFF;#0]    " + pad + propName + "] : " + propValue);
+               props.push("[[i;#DDDDFF;#0]    " + propName + pad + "] : " + propValue);
             }
             props.sort();
             shell.displayPages(term, props, 20, 0);

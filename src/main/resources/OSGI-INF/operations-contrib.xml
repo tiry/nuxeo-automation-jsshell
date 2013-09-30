@@ -1,0 +1,11 @@
+<component name="org.nuxeo.js.shell.EnableAutomationTraces">
+
+  <require>org.nuxeo.ecm.automation.jsf.contrib</require>
+
+  <extension target="org.nuxeo.ecm.core.operation.OperationServiceComponent"
+    point="operations" >
+      <operation class="org.nuxeo.js.shell.EnableAutomationTraces" />
+      <operation class="org.nuxeo.js.shell.EvalSeamExpression" />
+   </extension>
+
+</component>

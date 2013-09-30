@@ -197,11 +197,16 @@
            if (op) {
              var opts = {automationParams : { params : {},
                  context : {}} };
+             if (window.ctx.conversationId) {
+               opts.automationParams.context.conversationId = window.ctx.conversationId;
+             }
              for (var i = 1; i < cmds.length; i++) {
                var arg = cmds[i];
                if (arg.indexOf("=")>0) {
                  var param = arg.split("=");
                  opts.automationParams.params[param[0]]=param[1];
+               } else {
+               opts.automationParams.input = arg;
                }
              }
 
@@ -240,8 +245,14 @@
         var type = ob['entity-type'];
         if (type == 'document') {
           return this.printDoc(ob);
+        } else if (type == 'documents') {
+          var lines="";
+          for (var idx=0; idx < ob.entries.length; idx++) {
+            lines += this.printDoc(ob.entries[idx]) + "\n";
+          }
+          return lines;
         } else {
-          return JSON.stringify(ob);
+          return JSON.stringify(ob, null, 2);
         }
       }
 
@@ -291,7 +302,11 @@
                 suggestions.push("and");
                 suggestions.push("or");
                 suggestions.push("ecm:uuid");
+                suggestions.push("ecm:primaryType");
+                suggestions.push("ecm:mixinType");
                 suggestions.push("ecm:path");
+                suggestions.push("ecm:lockOwner");
+                suggestions.push("ecm:currentLifeCycleState");
                 suggestions.push("ecm:parentId");
                 suggestions.push("ecm:isCheckedInVersion");
               }
@@ -339,6 +354,8 @@
             absolutePath = absolutePath + value;
           }
 
+          console.log("absolutePath=" + absolutePath);
+
           var parentPath = absolutePath.substring(0, absolutePath.lastIndexOf("/")+1);
           var name = absolutePath.substring(absolutePath.lastIndexOf("/")+1);
 
@@ -365,11 +382,12 @@
                }
                for (var i =0 ; i < docs.entries.length; i++) {
                 if (value.indexOf("/")!=0) {
-                  suggestions.push(docs.entries[i].path.substring(shell.ctx.path.length));
+                  suggestions.push(docs.entries[i].path.substring(shell.ctx.path.length+1));
                 } else {
                   suggestions.push(docs.entries[i].path);
                 }
                }
+               console.log("suggestions",suggestions);
                callback(suggestions);
               })
           .fail(function (xhr, status) { console.log("Error", status);})

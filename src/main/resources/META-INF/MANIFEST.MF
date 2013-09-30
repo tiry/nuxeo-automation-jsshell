@@ -5,7 +5,8 @@ Bundle-ClassPath: .
 Bundle-Version: 1.0
 Bundle-Name: JsAutomationShell
 Bundle-ManifestVersion: 2
+Nuxeo-Component: OSGI-INF/theme-override.xml,OSGI-INF/actions-contrib.
+ xml,OSGI-INF/operations-contrib.xml
 Bundle-SymbolicName: JsAutomationShell
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
-Nuxeo-Component: OSGI-INF/theme-override.xml,
- OSGI-INF/actions-contrib.xml
+

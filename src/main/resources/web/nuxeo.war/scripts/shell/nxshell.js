@@ -112,7 +112,8 @@
              var cb = [];
               for (var i =0 ; i < docs.entries.length; i++) {
                 var doc = docs.entries[i];
-                cb.push(function() {doDisplayItem(doc, term, cb)});
+                var f = function(doc){ return function() {doDisplayItem(doc, term, cb)}}(doc);
+                cb.push(f);
               }
               cb.push(function() {
                   if (docs.pageCount==1) {

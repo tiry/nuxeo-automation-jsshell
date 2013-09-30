@@ -168,6 +168,14 @@
     select : {
         impl : function (cmds, term, shell) {
         var query = cmds.join(" ");
+        var postCommand;
+
+        if (query.indexOf("|")>0) {
+          var parts = query.split("|");
+          query = parts[0];
+          postCommand = parts[1];
+        }
+
         term.echo("execute " + query);
         var operation = nuxeo.operation('Document.PageProvider' , {
           automationParams: {
@@ -178,7 +186,36 @@
            }
          }
         });
-        shell.displayPagesFromOperation(term, operation);
+        var postProcess;
+        if (postCommand) {
+          postProcess = function(doc, term, cb) {
+          console.log("postProcess", doc, cb);
+            var cmds = postCommand.trim().split(" ");
+            console.log(cmds);
+            var op = shell.findOperation(cmds[0]);
+            var opts = {automationParams : { params : {},
+                context : {}} };
+            for (var i = 1; i < cmds.length; i++) {
+                var arg = cmds[i];
+                if (arg.indexOf("=")>0) {
+                  var param = arg.split("=");
+                  opts.automationParams.params[param[0]]=param[1];
+                }
+            }
+            opts.automationParams.input = "doc:" + doc.uid;
+            nuxeo.operation(op.id, opts)
+            .done(function(data, status,xhr) {
+              term.echo("executed " + op.id + "ok");
+              cb();
+            })
+            .fail(function(xhr,status) {
+              term.echo("executed " + op.id + "Failed");
+              cb();
+            })
+            .execute();
+          }
+        }
+        shell.displayPagesFromOperation(term, operation, postProcess);
 
       },
       help : "use nxql to search for Document",

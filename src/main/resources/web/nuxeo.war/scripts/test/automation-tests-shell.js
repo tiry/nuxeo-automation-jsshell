@@ -15,10 +15,10 @@ function NxReporter(runner, term) {
 
   runner.on('end', function(){
     if (failures==0) {
-      term.echo('[[b;#00FF00;#0] COMPLETED ] ' + passes + " / " + (passes + failures));    
+      term.echo('[[b;#00FF00;#0] COMPLETED ] ' + passes + " / " + (passes + failures));
     } else {
-      term.echo('[[b;#FFFF00;#0] FAILED: ] ' + passes + " / " + (passes + failures));    
-    }    
+      term.echo('[[b;#FFFF00;#0] FAILED: ] ' + passes + " / " + (passes + failures));
+    }
   });
 }
 
@@ -36,6 +36,17 @@ function NxReporter(runner, term) {
             mocha.run();
           },
           help : "Run Automation units tests",
+          suggest : []
+      },
+      testsGUI  : {
+          impl : function (cmds, term, shell) {
+              window
+              .open(
+                  "/nuxeo/automation-tests.html",
+                  '_blank',
+                  'toolbar=0, scrollbars=1, location=0, statusbar=0, menubar=0, resizable=1, dependent=1, width=1024, height=768');
+          },
+          help : "Run Automation units tests via GUI",
           suggest : []
       }
   };

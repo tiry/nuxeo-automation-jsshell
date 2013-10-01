@@ -2112,6 +2112,28 @@
         // ---------------------------------------------------------------------
         var tab_count = 0;
 
+        // nuxeo specific
+        function common_substring(data) {
+            var i, ch, memo, idx = 0, maxLen = 0;
+            for (i=0; i<data.length; i++) {
+              if (maxLen ==0) {
+                 maxLen = data[i].length;
+              } else if (data[i].length < maxLen) {
+                 maxLen = data[i].length;
+              }
+            }
+            do {
+              memo = null
+              for (i=0; i < data.length; i++) {
+                ch = data[i].charAt(idx)
+                if (!ch) break
+                if (!memo) memo = ch
+                else if (ch != memo) break
+              }
+            } while (i == data.length && idx < maxLen && ++idx)
+            return (data[0] || '').slice(0, idx)
+        }
+
         function key_down(e) {
             var top = interpreters.top();
             if ($.type(top.keydown) === 'function') {
@@ -2181,6 +2203,10 @@
                         if (matched.length === 1) {
                             self.insert(matched[0].replace(reg, ''));
                         } else if (matched.length > 1) {
+                            var sub = common_substring(matched);
+                            if (sub.length > command.length) {
+                              self.insert(sub.replace(reg, ''));
+                            }
                             if (tab_count >= 2) {
                                 echo_command(command);
                                 self.echo(matched.join('\t'));

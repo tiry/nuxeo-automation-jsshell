@@ -22,7 +22,8 @@
       <path>css/jquery.terminal.css</path>
     </resource>
     <resource name="jquery.terminal.js">
-      <path>scripts/shell/jquery.terminal-0.6.3.js</path>
+      <!-- <path>scripts/shell/jquery.terminal-0.6.3.js</path> -->
+      <path>scripts/shell/jquery.terminal-0.7.6.js</path>
       <require>jquery.js</require>
     </resource>
     <resource name="nuxeo-automation.js">

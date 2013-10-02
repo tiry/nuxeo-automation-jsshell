@@ -69,6 +69,7 @@
           } else if (e.which == 81) { // Q
             term.pop();
             term.set_prompt(opts.prompt);
+            return false;
           }
         }
       });
@@ -334,7 +335,7 @@
         nuxeo.operation(op.id, opts).done(function(data, status, xhr) {
           term.echo(me.prettyPrint(data));
         }).fail(function(xhr, status) {
-          term.echo("Error " + status);
+          me.printError(xhr, term);
         }).execute();
         return;
       }
@@ -377,6 +378,33 @@
       } else {
         return JSON.stringify(ob, null, 2);
       }
+    }
+
+    nxshell.prototype.printError = function(xhr, term) {
+      console.log("Error", xhr);
+      var err = [];
+      err.push("  [[bi;#FF0000;#0] ERROR ] server returned code " + xhr.status);
+      if (xhr.responseText.indexOf("entity-type")>0){
+        err.push(JSON.parse(xhr.responseText).message);
+        err.push("   use [[bi;#00FF00;#0]q] to quick and [[bi;#00FF00;#0]s] to see stack :");
+        term.echo(err.join("\n"));
+        term.push(jQuery.noop, {
+            keydown : function(e) {
+              if (e.which === 13 || e.which == 83) { // return
+                term.echo(JSON.parse(xhr.responseText).stack);
+                term.pop();
+                return false;
+              } else if (e.which == 81) { // Q
+                term.pop();
+                return false;
+              }
+         }
+        }
+        );
+        return;
+      }
+      term.echo(err.join("\n"));
+
     }
 
     nxshell.prototype.findOperation = function(operationId) {

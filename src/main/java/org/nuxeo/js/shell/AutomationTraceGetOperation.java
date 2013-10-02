@@ -28,26 +28,27 @@ import org.nuxeo.runtime.api.Framework;
 /**
  * @author <a href="mailto:tdelprat@nuxeo.com">Tiry</a>
  */
-@Operation(id=EnableAutomationTraces.ID, category=Constants.CAT_EXECUTION, label="EnableAutomationTraces", description="")
-public class EnableAutomationTraces {
+@Operation(id=AutomationTraceGetOperation.ID, category=Constants.CAT_EXECUTION, label="Traces.getTrace", description="Retrieve trace associated to a Chain or an Operation")
+public class AutomationTraceGetOperation {
 
-    public static final String ID = "EnableAutomationTraces";
+    public static final String ID = "Traces.getTrace";
 
-    @Param(name = "traceKey", required = false)
+    @Param(name = "traceKey", required = true)
     protected String traceKey;
+
 
     @OperationMethod
     public String run() {
-
         TracerFactory tracerFactory = Framework.getLocalService(TracerFactory.class);
-
         Trace trace = tracerFactory.getTrace(traceKey);
-
         if (trace!=null) {
-            return trace.getFormattedText();
+                if (tracerFactory.getRecordingState()) {
+                    return trace.getFormattedText();
+                } else {
+                    return trace.getLiteFormattedText();
+                }
         } else {
-            return "notrace";
+            return "no trace found";
         }
     }
-
 }

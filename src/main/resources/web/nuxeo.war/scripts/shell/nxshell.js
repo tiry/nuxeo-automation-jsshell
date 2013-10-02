@@ -370,6 +370,10 @@
           lines += this.printDoc(ob.entries[idx]) + "\n";
         }
         return lines;
+      } else if (type == 'string') {
+        return ob.value;
+      } else if (type == 'boolean') {
+        return ob.value;
       } else {
         return JSON.stringify(ob, null, 2);
       }
@@ -606,15 +610,12 @@
 
     nxshell.prototype.restCallCompletion = function(term, input, callback) {
       var suggestions = [];
-      // console.log("input = " + input);
       var nodes = input.split("\.");
       var lastNode = nodes.pop();
       if (lastNode == "") {
         lastNode = nodes.pop();
       }
       var previousNode = nodes.pop();
-
-      // console.log("nodes:", previousNode, lastNode);
 
       if (lastNode == "nuxeo" || previousNode == "nuxeo") {
         suggestions.push("nuxeo.doc(");
@@ -639,12 +640,10 @@
           return;
         }
       } else if (previousNode.indexOf("doc(") == 0) {
-        // console.log("here2");
         nodes = input.split("\.");
         var segments = nodes;
         segments.pop();
         var prefix = segments.join(".");
-        // console.log("prefix", prefix);
         suggestions.push(prefix + ".update");
         suggestions.push(prefix + ".create");
         suggestions.push(prefix + ".fetch");

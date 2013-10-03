@@ -4,8 +4,6 @@
 
   <extension target="org.nuxeo.ecm.core.operation.OperationServiceComponent"
     point="operations" >
-      <operation class="org.nuxeo.js.shell.AutomationTraceGetOperation" />
-      <operation class="org.nuxeo.js.shell.AutomationTraceToggleOperation" />
       <operation class="org.nuxeo.js.shell.EvalSeamExpression" />
    </extension>
 

@@ -23,7 +23,7 @@ import org.nuxeo.ecm.platform.actions.seam.SeamActionContext;
 @Operation(id=EvalSeamExpression.ID, category=Constants.CAT_EXECUTION, label="Eval Seam Expression", description="")
 public class EvalSeamExpression {
 
-    public static final String ID = "Seam.EvalExpression";
+    public static final String ID = "Seam.Eval";
 
     @Param(name = "conversationId", required = false)
     protected String conversationId;

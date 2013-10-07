@@ -797,6 +797,9 @@
     opts.onInit = function(term) {
       return nx.init(term)
     };
+
+    window.scrollTo(0,0);
+
     var htmlOb = nuxeo.shell_instance;
     if (htmlOb) {
       if (htmlOb.css("display") == 'block') {

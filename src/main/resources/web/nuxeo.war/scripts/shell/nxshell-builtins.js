@@ -118,7 +118,7 @@
                props.push("[[i;#DDDDFF;#0]    " + propName + pad + "] : " + propValue);
             }
             props.sort();
-            shell.displayPages(term, props, 20, 0);
+            shell.displayPagesFromList(term, props, 20, 0);
           } else {
 
           }

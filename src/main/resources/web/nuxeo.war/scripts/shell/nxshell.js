@@ -798,6 +798,9 @@
       return nx.init(term)
     };
 
+
+    nuxeo.shell_scrollYBeforeDisplay = window.scrollY
+
     window.scrollTo(0,0);
 
     var htmlOb = nuxeo.shell_instance;
@@ -905,7 +908,7 @@
                     .open(
                         "/nuxeo/jsterm_popup.html",
                         '_blank',
-                        'toolbar=0, scrollbars=1, location=0, statusbar=0, menubar=0, resizable=1, dependent=1, width=1024, height=768');
+                        'toolbar=0, scrollbars=1, location=0, statusbar=0, menubar=0, resizable=1, dependent=1, width=800, height=600');
                 htmlOb.hide('slow')
               }, "console.png"));
       bar.append(mkButton("Page Up", function(event, term) {
@@ -947,6 +950,9 @@
     nuxeo.shell_instance = htmlOb;
     nx.hide = function(term) {
       htmlOb.hide('slow');
+      if (nuxeo.shell_scrollYBeforeDisplay) {
+        window.scrollTo(0,nuxeo.shell_scrollYBeforeDisplay);
+      }
       // nx.saveState();
     };
   };
